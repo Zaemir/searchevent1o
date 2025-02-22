@@ -54,6 +54,32 @@
     .event-card img { width: 100%; border-radius: 5px; }
     .event-card h3 { margin: 10px 0; }
   </style>
+  <script>
+  let map, marker;
+  function initMap() {
+    const defaultLoc = { lat: 37.7749, lng: -122.4194 }; // Default coordinates (San Francisco, for example)
+    map = new google.maps.Map(document.getElementById("map"), {
+      center: defaultLoc,
+      zoom: 12,
+    });
+    map.addListener("click", (e) => {
+      placeMarker(e.latLng);
+    });
+  }
+  
+  function placeMarker(location) {
+    if (marker) {
+      marker.setPosition(location);
+    } else {
+      marker = new google.maps.Marker({
+        position: location,
+        map: map,
+      });
+    }
+    document.getElementById("lat").value = location.lat();
+    document.getElementById("lng").value = location.lng();
+  }
+</script>
 </head>
 <body>
   <header>
