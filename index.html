@@ -1,17 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Event Search Prototype</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Firebase SDK: Place the module script here -->
+  
+  <!-- Firebase SDK (using module syntax) -->
   <script type="module">
-    // Import the functions you need from the SDKs you need
+    // Import the functions needed from Firebase SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-analytics.js";
-    // TODO: Add SDKs for Firebase products that you want to use
-    // https://firebase.google.com/docs/web/setup#available-libraries
-
-    // Your web app's Firebase configuration
-    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
+    // Your Firebase configuration (as provided)
     const firebaseConfig = {
       apiKey: "AIzaSyCmFpsG231lCdIJtHeN6mH-Bxd-LHzrgZg",
       authDomain: "eventsearchprototype.firebaseapp.com",
@@ -21,22 +20,16 @@
       appId: "1:1090688920321:web:3b6c399e2686e1e2718900",
       measurementId: "G-KRG9R9WBF2"
     };
-
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
+    // Initialize Firestore and attach it to the window object for global access
+    window.db = getFirestore(app);
   </script>
-  <!-- Other CSS and meta tags can follow here -->
-  <script async
-  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0&callback=initMap">
-</script>
-</head>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Event Search - Home</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Google Maps API (if needed on other pages; not used on homepage) -->
+  <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0&callback=initMap"></script>
+  
+  <!-- CSS Styles -->
   <style>
     /* Global Styles */
     body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; }
@@ -54,32 +47,6 @@
     .event-card img { width: 100%; border-radius: 5px; }
     .event-card h3 { margin: 10px 0; }
   </style>
-  <script>
-  let map, marker;
-  function initMap() {
-    const defaultLoc = { lat: 37.7749, lng: -122.4194 }; // Default coordinates (San Francisco, for example)
-    map = new google.maps.Map(document.getElementById("map"), {
-      center: defaultLoc,
-      zoom: 12,
-    });
-    map.addListener("click", (e) => {
-      placeMarker(e.latLng);
-    });
-  }
-  
-  function placeMarker(location) {
-    if (marker) {
-      marker.setPosition(location);
-    } else {
-      marker = new google.maps.Marker({
-        position: location,
-        map: map,
-      });
-    }
-    document.getElementById("lat").value = location.lat();
-    document.getElementById("lng").value = location.lng();
-  }
-</script>
 </head>
 <body>
   <header>
@@ -102,27 +69,40 @@
       <button id="btnPlaces" onclick="filterType('place')">Places</button>
     </div>
     <div class="event-list" id="eventList">
-      <!-- Event cards will be injected here -->
+      <!-- Event cards will be injected here dynamically from Firestore -->
     </div>
   </div>
   
-  <script>
-    // Sample data for events and places
-    const items = [
-      { id: 1, type: 'event', title: "Art Exhibition", date: "2025-03-10", location: "Art Gallery", description: "Modern art exhibition featuring local artists.", image: "https://via.placeholder.com/300x150?text=Art+Exhibition" },
-      { id: 2, type: 'event', title: "Music Concert", date: "2025-03-12", location: "City Arena", description: "Live concert by local bands.", image: "https://via.placeholder.com/300x150?text=Music+Concert" },
-      { id: 3, type: 'place', title: "Modern Art Museum", date: "", location: "Downtown", description: "Visit the new modern art museum.", image: "https://via.placeholder.com/300x150?text=Art+Museum" },
-      { id: 4, type: 'place', title: "Rooftop Bar", date: "", location: "City Center", description: "Enjoy drinks with a breathtaking view.", image: "https://via.placeholder.com/300x150?text=Rooftop+Bar" },
-      { id: 5, type: 'event', title: "Food Festival", date: "2025-03-15", location: "Central Park", description: "Taste local cuisines at this vibrant festival.", image: "https://via.placeholder.com/300x150?text=Food+Festival" }
-    ];
+  <!-- Main Script: Fetch and render events from Firestore -->
+  <script type="module">
+    import { collection, getDocs, orderBy, query } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
     
     let currentFilter = 'all';
     let currentQuery = "";
     
-    function renderItems() {
+    async function loadEvents() {
+      try {
+        // Create a query to get events ordered by createdAt descending
+        const q = query(collection(window.db, "events"), orderBy("createdAt", "desc"));
+        const querySnapshot = await getDocs(q);
+        const events = [];
+        querySnapshot.forEach((doc) => {
+          let data = doc.data();
+          data.id = doc.id;
+          // If type not set, default to "event"
+          data.type = data.type || "event";
+          events.push(data);
+        });
+        renderItems(events);
+      } catch (error) {
+        console.error("Error fetching events: ", error);
+      }
+    }
+    
+    function renderItems(events) {
       const eventList = document.getElementById('eventList');
       eventList.innerHTML = "";
-      const filteredItems = items.filter(item => {
+      const filteredItems = events.filter(item => {
         const matchesQuery = item.title.toLowerCase().includes(currentQuery) || item.description.toLowerCase().includes(currentQuery);
         const matchesType = currentFilter === 'all' ? true : item.type === currentFilter;
         return matchesQuery && matchesType;
@@ -138,9 +118,9 @@
         card.className = 'event-card';
         card.onclick = () => { window.location.href = `event.html?id=${item.id}`; };
         card.innerHTML = `
-          <img src="${item.image}" alt="${item.title}">
+          <img src="${item.imageUrls && item.imageUrls.length > 0 ? item.imageUrls[0] : 'https://via.placeholder.com/300x150'}" alt="${item.title}">
           <h3>${item.title}</h3>
-          ${item.date ? `<p><strong>Date:</strong> ${item.date}</p>` : ""}
+          ${item.date ? `<p><strong>Date:</strong> ${item.date} ${item.time || ""}</p>` : ""}
           <p><strong>Location:</strong> ${item.location}</p>
           <p>${item.description}</p>
         `;
@@ -158,15 +138,16 @@
       if (type === 'event') document.getElementById('btnEvents').classList.add('active');
       if (type === 'place') document.getElementById('btnPlaces').classList.add('active');
       
-      renderItems();
+      loadEvents();
     }
     
     document.getElementById('searchInput').addEventListener('input', function(e) {
       currentQuery = e.target.value.toLowerCase();
-      renderItems();
+      loadEvents();
     });
     
-    renderItems();
+    // Initial load of events from Firestore
+    loadEvents();
   </script>
 </body>
 </html>
