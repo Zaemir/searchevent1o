@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Event Details</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; }
+    header { background: #fff; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    nav a { margin: 0 10px; text-decoration: none; color: #333; }
+    .container { width: 90%; max-width: 800px; margin: 20px auto; background: #fff; padding: 20px; border-radius: 5px; }
+    .media { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+    .media img { max-width: 100%; border-radius: 5px; }
+    .map { width: 100%; height: 300px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="auth.html">Sign In</a>
+      <a href="create-event.html">Create Event</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </header>
+  <div class="container">
+    <h1 id="eventTitle">Event Title</h1>
+    <p id="eventDateTime"><strong>Date & Time:</strong> </p>
+    <p id="eventLocation"><strong>Location:</strong> </p>
+    <div class="media" id="mediaContainer">
+      <!-- Images/Videos will be inserted here -->
+    </div>
+    <p id="eventDescription">Event Description</p>
+    <div class="map" id="mapContainer">
+      <!-- Embedded map will appear here -->
+    </div>
+  </div>
+  
+  <script>
+    // Sample events data with extra media and map embed
+    const eventsData = [
+      {
+        id: 1,
+        type: 'event',
+        title: "Art Exhibition",
+        date: "2025-03-10 18:00",
+        location: "Art Gallery, Downtown",
+        description: "Modern art exhibition featuring local artists. Enjoy a visual treat!",
+        image: "https://via.placeholder.com/300x150?text=Art+Exhibition",
+        media: [
+          "https://via.placeholder.com/300x200?text=Artwork+1",
+          "https://via.placeholder.com/300x200?text=Artwork+2",
+          "https://via.placeholder.com/300x200?text=Artwork+3"
+        ],
+        mapEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3153.125194305401!2d-122.41941508468264!3d37.77492927975901!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8085809c7c0d0b5b%3A0xe3d8c8eeb7b3b5d9!2sArt%20Gallery!5e0!3m2!1sen!2sus!4v1600000000000"
+      },
+      {
+        id: 2,
+        type: 'event',
+        title: "Music Concert",
+        date: "2025-03-12 20:00",
+        location: "City Arena",
+        description: "Live concert featuring top local bands.",
+        image: "https://via.placeholder.com/300x150?text=Music+Concert",
+        media: [
+          "https://via.placeholder.com/300x200?text=Concert+1",
+          "https://via.placeholder.com/300x200?text=Concert+2"
+        ],
+        mapEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3153.125194305401!2d-122.41941508468264!3d37.77492927975901!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8085809c7c0d0b5b%3A0xe3d8c8eeb7b3b5d9!2sCity%20Arena!5e0!3m2!1sen!2sus!4v1600000000000"
+      }
+    ];
+    
+    // Retrieve event ID from query string
+    const urlParams = new URLSearchParams(window.location.search);
+    const eventId = parseInt(urlParams.get('id'));
+    const eventItem = eventsData.find(e => e.id === eventId);
+    
+    if(eventItem) {
+      document.getElementById('eventTitle').textContent = eventItem.title;
+      document.getElementById('eventDateTime').innerHTML = "<strong>Date & Time:</strong> " + eventItem.date;
+      document.getElementById('eventLocation').innerHTML = "<strong>Location:</strong> " + eventItem.location;
+      document.getElementById('eventDescription').textContent = eventItem.description;
+      
+      // Render media images
+      const mediaContainer = document.getElementById('mediaContainer');
+      eventItem.media.forEach(url => {
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = eventItem.title;
+        mediaContainer.appendChild(img);
+      });
+      
+      // Embed map
+      document.getElementById('mapContainer').innerHTML = `<iframe src="${eventItem.mapEmbed}" width="100%" height="100%" frameborder="0" style="border:0;" allowfullscreen="" aria-hidden="false" tabindex="0"></iframe>`;
+    } else {
+      document.querySelector('.container').innerHTML = "<p>Event not found.</p>";
+    }
+  </script>
+</body>
+</html>
