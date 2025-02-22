@@ -14,91 +14,25 @@
     input, textarea { padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; }
     input[type="file"] { padding: 5px; }
     button[type="submit"] { padding: 10px; background: #333; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
-    .map-placeholder { width:100%; height:300px; background:#eee; text-align:center; line-height:300px; margin-bottom:15px; }
   </style>
-</head>
-<body>
-  <header>
-    <nav>
-      <a href="index.html">Home</a>
-      <a href="auth.html">Sign In</a>
-      <a href="contact.html">Contact</a>
-    </nav>
-  </header>
- <div class="container">
-  <h1>Create Event</h1>
-  <form id="createEventForm">
-    <label for="eventTitle">Title:</label>
-    <input type="text" id="eventTitle" name="eventTitle" required>
-
-    <label for="eventDescription">Description:</label>
-    <textarea id="eventDescription" name="eventDescription" rows="4" required></textarea>
-
-    <label for="eventDate">Date:</label>
-    <input type="date" id="eventDate" name="eventDate" required>
-
-    <label for="eventTime">Time:</label>
-    <input type="time" id="eventTime" name="eventTime" required>
-
-    <label for="eventLocation">Location (text):</label>
-    <input type="text" id="eventLocation" name="eventLocation" placeholder="Enter address" required>
-
-    <label>Pick Location on Map:</label>
-    <div id="map" style="width:100%; height:300px; margin-bottom:15px;"></div>
-    <!-- Hidden inputs to store latitude and longitude -->
-    <input type="hidden" id="lat" name="lat" required>
-    <input type="hidden" id="lng" name="lng" required>
-
-    <label for="eventImages">Upload Images (3 to 5):</label>
-    <input type="file" id="eventImages" name="eventImages" accept="image/*" multiple required>
-
-    <button type="submit">Submit Event</button>
-  </form>
-</div>
-
   
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script>
-  document.getElementById('createEventForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    // Collect form values
-    const title = document.getElementById("eventTitle").value;
-    const description = document.getElementById("eventDescription").value;
-    const date = document.getElementById("eventDate").value;
-    const time = document.getElementById("eventTime").value;
-    const locationText = document.getElementById("eventLocation").value;
-    const lat = document.getElementById("lat").value;
-    const lng = document.getElementById("lng").value;
-    
-    // For image uploads, here we simulate with a placeholder URL.
-    // In a real scenario, you would upload images to Firebase Storage and get their URLs.
-    const imageUrls = [];
-    const files = document.getElementById("eventImages").files;
-    for (let i = 0; i < files.length; i++) {
-      imageUrls.push("https://via.placeholder.com/300x150?text=" + encodeURIComponent(title));
-    }
-    
-    try {
-      // Save event data to Firestore
-      await db.collection("events").add({
-        title: title,
-        description: description,
-        date: date,
-        time: time,
-        location: locationText,
-        lat: parseFloat(lat),
-        lng: parseFloat(lng),
-        imageUrls: imageUrls,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      alert("Event submitted successfully!");
-      // Redirect back to homepage
-      window.location.href = "index.html";
-    } catch (error) {
-      console.error("Error adding event: ", error);
-      alert("Error submitting event.");
-    }
-  });
-</script>
-</body>
-</html>
+    // Firebase configuration (provided by you)
+    const firebaseConfig = {
+      apiKey: "AIzaSyCmFpsG231lCdIJtHeN6mH-Bxd-LHzrgZg",
+      authDomain: "eventsearchprototype.firebaseapp.com",
+      projectId: "eventsearchprototype",
+      storageBucket: "eventsearchprototype.firebasestorage.app",
+      messagingSenderId: "1090688920321",
+      appId: "1:1090688920321:web:3b6c399e2686e1e2718900",
+      measurementId: "G-KRG9R9WBF2"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+  </script>
+  
+  <!-- Google Maps API (replace YOUR_GOOGLE_MAPS_API_KEY with your actual key) -->
+  <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0&callbac
