@@ -1,3 +1,33 @@
+<head>
+  <meta charset="UTF-8">
+  <title>Event Search Prototype</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Firebase SDK: Place the module script here -->
+  <script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-analytics.js";
+    // TODO: Add SDKs for Firebase products that you want to use
+    // https://firebase.google.com/docs/web/setup#available-libraries
+
+    // Your web app's Firebase configuration
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+    const firebaseConfig = {
+      apiKey: "AIzaSyCmFpsG231lCdIJtHeN6mH-Bxd-LHzrgZg",
+      authDomain: "eventsearchprototype.firebaseapp.com",
+      projectId: "eventsearchprototype",
+      storageBucket: "eventsearchprototype.firebasestorage.app",
+      messagingSenderId: "1090688920321",
+      appId: "1:1090688920321:web:3b6c399e2686e1e2718900",
+      measurementId: "G-KRG9R9WBF2"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+  </script>
+  <!-- Other CSS and meta tags can follow here -->
+</head>
 <!DOCTYPE html>
 <html lang="en">
 <head>
