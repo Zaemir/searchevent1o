@@ -17,7 +17,7 @@
     #map { width: 100%; height: 300px; margin-bottom: 15px; }
   </style>
   
-  <!-- Firebase SDK -->
+  <!-- Firebase SDK (compat version) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script>
@@ -35,17 +35,25 @@
     const db = firebase.firestore();
   </script>
   
-  <!-- Google Maps API (using your provided key) -->
-  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0&callback=initMap"></script>
+  <!-- Google Maps API with async and defer -->
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0"></script>
+  
   <script>
     let map, marker;
+    
+    // Initialize the map only when the DOM is fully loaded
     function initMap() {
-      const defaultLoc = { lat: 37.7749, lng: -122.4194 }; // Default location: San Francisco
-      map = new google.maps.Map(document.getElementById("map"), {
+      const mapDiv = document.getElementById("map");
+      if (!mapDiv) {
+        console.error("Error: 'map' div not found!");
+        return;
+      }
+      const defaultLoc = { lat: 37.7749, lng: -122.4194 }; // Default center (San Francisco)
+      map = new google.maps.Map(mapDiv, {
         center: defaultLoc,
         zoom: 12,
       });
-      // When user clicks on the map, update marker
+      // Add a click listener to update marker on map clicks
       map.addListener("click", (e) => {
         placeMarker(e.latLng);
       });
@@ -60,17 +68,16 @@
           map: map,
         });
       }
-      // Update hidden input values for latitude and longitude
+      // Update hidden latitude and longitude fields
       document.getElementById("lat").value = location.lat();
       document.getElementById("lng").value = location.lng();
       console.log("Marker placed at:", location.lat(), location.lng());
     }
     
-    // Geocode address from location field to recenter map
+    // Geocode the address entered in the location text field
     function geocodeAddress() {
       const address = document.getElementById("eventLocation").value;
       if (!address) return;
-      
       const geocoder = new google.maps.Geocoder();
       geocoder.geocode({ address: address }, (results, status) => {
         if (status === "OK") {
@@ -84,10 +91,11 @@
       });
     }
     
-    // Add onblur event to location input field
-    window.addEventListener("DOMContentLoaded", () => {
+    // When the page loads, initialize the map and attach event listeners
+    window.onload = function() {
+      initMap();
       document.getElementById("eventLocation").addEventListener("blur", geocodeAddress);
-    });
+    };
   </script>
 </head>
 <body>
@@ -118,8 +126,8 @@
       <input type="text" id="eventLocation" name="eventLocation" placeholder="Enter address" required>
       
       <label>Pick Location on Map:</label>
-      <div id="map" style="width:100%; height:300px; margin-bottom:15px;"></div>
-      <!-- Hidden inputs for lat/lng -->
+      <div id="map"></div>
+      <!-- Hidden inputs for latitude and longitude -->
       <input type="hidden" id="lat" name="lat" required>
       <input type="hidden" id="lng" name="lng" required>
       
@@ -131,7 +139,7 @@
   </div>
   
   <script>
-    document.getElementById('createEventForm').addEventListener('submit', async function(e) {
+    document.getElementById("createEventForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       console.log("Form submitted.");
       
@@ -146,9 +154,9 @@
       
       console.log("Collected Data:", { title, description, date, time, locationText, lat, lng });
       
-      // Ensure that lat and lng are valid
+      // Ensure latitude and longitude have been set
       if (!lat || !lng) {
-        alert("Please select a valid location on the map.");
+        alert("Please select a valid location on the map by either clicking on the map or entering a valid address.");
         return;
       }
       
