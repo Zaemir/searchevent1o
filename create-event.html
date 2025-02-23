@@ -17,7 +17,7 @@
     #map { width: 100%; height: 300px; margin-bottom: 15px; }
   </style>
   
-  <!-- Firebase SDK (compat version) -->
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script>
@@ -35,14 +35,14 @@
     const db = firebase.firestore();
   </script>
   
-  <!-- Google Maps API with async and defer -->
+  <!-- Google Maps API with async and defer; remove callback parameter since we use window.onload -->
   <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0"></script>
   
   <script>
     let map, marker;
     
-    // Initialize the map only when the DOM is fully loaded
-    function initMap() {
+    // Define initMap in the global scope so that it's accessible to the API callback if needed
+    window.initMap = function() {
       const mapDiv = document.getElementById("map");
       if (!mapDiv) {
         console.error("Error: 'map' div not found!");
@@ -53,11 +53,11 @@
         center: defaultLoc,
         zoom: 12,
       });
-      // Add a click listener to update marker on map clicks
+      // When the user clicks on the map, place a marker
       map.addListener("click", (e) => {
         placeMarker(e.latLng);
       });
-    }
+    };
     
     function placeMarker(location) {
       if (marker) {
@@ -74,7 +74,7 @@
       console.log("Marker placed at:", location.lat(), location.lng());
     }
     
-    // Geocode the address entered in the location text field
+    // Geocode the address entered in the location text field and recenter the map
     function geocodeAddress() {
       const address = document.getElementById("eventLocation").value;
       if (!address) return;
@@ -91,9 +91,11 @@
       });
     }
     
-    // When the page loads, initialize the map and attach event listeners
+    // Ensure the DOM is fully loaded before adding event listeners
     window.onload = function() {
+      // Initialize the map
       initMap();
+      // Attach a blur event to the location input for geocoding
       document.getElementById("eventLocation").addEventListener("blur", geocodeAddress);
     };
   </script>
@@ -127,7 +129,7 @@
       
       <label>Pick Location on Map:</label>
       <div id="map"></div>
-      <!-- Hidden inputs for latitude and longitude -->
+      <!-- Hidden inputs to store latitude and longitude -->
       <input type="hidden" id="lat" name="lat" required>
       <input type="hidden" id="lng" name="lng" required>
       
@@ -154,13 +156,13 @@
       
       console.log("Collected Data:", { title, description, date, time, locationText, lat, lng });
       
-      // Ensure latitude and longitude have been set
+      // Ensure that latitude and longitude are set
       if (!lat || !lng) {
         alert("Please select a valid location on the map by either clicking on the map or entering a valid address.");
         return;
       }
       
-      // Simulate image upload with placeholder URLs
+      // Simulate image uploads with placeholder URLs
       const imageUrls = [];
       const files = document.getElementById("eventImages").files;
       for (let i = 0; i < files.length; i++) {
@@ -169,7 +171,8 @@
       
       try {
         console.log("Saving event to Firestore...");
-        await db.collection("events").add({
+        // Save the event to Firestore and get the new document's ID
+        const docRef = await db.collection("events").add({
           title: title,
           description: description,
           date: date,
@@ -180,9 +183,10 @@
           imageUrls: imageUrls,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        console.log("Event saved successfully!");
+        console.log("Event saved successfully! Document ID:", docRef.id);
         alert("Event submitted successfully!");
-        window.location.href = "index.html";
+        // Redirect to an event-submitted page with the event ID as a query parameter
+        window.location.href = "event-submitted.html?eventId=" + docRef.id;
       } catch (error) {
         console.error("Error adding event:", error);
         alert("Error submitting event.");
