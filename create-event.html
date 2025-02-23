@@ -35,18 +35,17 @@
     const db = firebase.firestore();
   </script>
   
-  <!-- Google Maps API (Replace YOUR_GOOGLE_MAPS_API_KEY with your actual key) -->
+  <!-- Google Maps API (using your provided key) -->
   <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0&callback=initMap"></script>
-  
   <script>
     let map, marker;
     function initMap() {
-      const defaultLoc = { lat: 37.7749, lng: -122.4194 }; // Default location (San Francisco)
+      const defaultLoc = { lat: 37.7749, lng: -122.4194 }; // Default location: San Francisco
       map = new google.maps.Map(document.getElementById("map"), {
         center: defaultLoc,
         zoom: 12,
       });
-      // When the user clicks on the map, update marker
+      // When user clicks on the map, update marker
       map.addListener("click", (e) => {
         placeMarker(e.latLng);
       });
@@ -61,11 +60,13 @@
           map: map,
         });
       }
+      // Update hidden input values for latitude and longitude
       document.getElementById("lat").value = location.lat();
       document.getElementById("lng").value = location.lng();
+      console.log("Marker placed at:", location.lat(), location.lng());
     }
     
-    // Geocode the address entered in the location field and recenter the map.
+    // Geocode address from location field to recenter map
     function geocodeAddress() {
       const address = document.getElementById("eventLocation").value;
       if (!address) return;
@@ -76,13 +77,14 @@
           const loc = results[0].geometry.location;
           map.setCenter(loc);
           placeMarker(loc);
+          console.log("Geocoded address:", address, loc.lat(), loc.lng());
         } else {
-          alert("Geocode was not successful for the following reason: " + status);
+          alert("Geocode was not successful: " + status);
         }
       });
     }
     
-    // Add an event listener to the location input field (on blur)
+    // Add onblur event to location input field
     window.addEventListener("DOMContentLoaded", () => {
       document.getElementById("eventLocation").addEventListener("blur", geocodeAddress);
     });
@@ -112,12 +114,12 @@
       <label for="eventTime">Time:</label>
       <input type="time" id="eventTime" name="eventTime" required>
       
-      <label for="eventLocation">Location (Put your exact location details, including your city, county/province, and country):</label>
+      <label for="eventLocation">Location (text):</label>
       <input type="text" id="eventLocation" name="eventLocation" placeholder="Enter address" required>
       
-      <label>Use the map section to accurately pinpoint the exact location:</label>
+      <label>Pick Location on Map:</label>
       <div id="map"></div>
-      <!-- Hidden inputs to store latitude and longitude -->
+      <!-- Hidden inputs for lat/lng -->
       <input type="hidden" id="lat" name="lat" required>
       <input type="hidden" id="lng" name="lng" required>
       
@@ -131,6 +133,7 @@
   <script>
     document.getElementById('createEventForm').addEventListener('submit', async function(e) {
       e.preventDefault();
+      console.log("Form submitted.");
       
       // Collect form values
       const title = document.getElementById("eventTitle").value;
@@ -141,7 +144,15 @@
       const lat = document.getElementById("lat").value;
       const lng = document.getElementById("lng").value;
       
-      // For image uploads, simulate with placeholder URLs.
+      console.log("Collected Data:", { title, description, date, time, locationText, lat, lng });
+      
+      // Ensure that lat and lng are valid
+      if (!lat || !lng) {
+        alert("Please select a valid location on the map.");
+        return;
+      }
+      
+      // Simulate image upload with placeholder URLs
       const imageUrls = [];
       const files = document.getElementById("eventImages").files;
       for (let i = 0; i < files.length; i++) {
@@ -149,7 +160,7 @@
       }
       
       try {
-        // Save event data to Firestore in the "events" collection
+        console.log("Saving event to Firestore...");
         await db.collection("events").add({
           title: title,
           description: description,
@@ -161,10 +172,11 @@
           imageUrls: imageUrls,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+        console.log("Event saved successfully!");
         alert("Event submitted successfully!");
         window.location.href = "index.html";
       } catch (error) {
-        console.error("Error adding event: ", error);
+        console.error("Error adding event:", error);
         alert("Error submitting event.");
       }
     });
