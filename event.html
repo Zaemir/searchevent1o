@@ -5,50 +5,49 @@
   <title>Event Details</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* Basic styling */
+    /* Base Styles */
     body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; }
     header { background: #fff; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     nav a { margin: 0 10px; text-decoration: none; color: #333; }
     .container { width: 90%; max-width: 800px; margin: 20px auto; background: #fff; padding: 20px; border-radius: 5px; }
     
-    /* Scrollable images banner */
+    /* Image Banner */
     #imageBanner {
       display: flex;
       overflow-x: auto;
       gap: 10px;
       margin-bottom: 20px;
-      padding-bottom: 10px;
     }
     #imageBanner img {
-      height: 200px;
+      height: 250px;
       border-radius: 5px;
+      object-fit: cover;
     }
     
     /* Event Title */
     #eventTitle {
       font-size: 2.5em;
-      margin-bottom: 10px;
+      margin: 10px 0;
       color: #333;
     }
     
-    /* Detail sections */
+    /* Section Styles */
     .section {
       margin-bottom: 20px;
     }
     .section h2 {
-      font-size: 1.2em;
+      font-size: 1.3em;
       margin-bottom: 5px;
       color: #555;
-      border-bottom: 2px solid #ddd;
-      padding-bottom: 5px;
     }
     .section p {
-      font-size: 1em;
+      font-size: 1.1em;
       color: #444;
       margin: 0;
+      line-height: 1.5;
     }
     
-    /* Map container */
+    /* Map Container */
     #mapContainer {
       width: 100%;
       height: 300px;
@@ -61,7 +60,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script>
-    // Firebase configuration (same as used in other pages)
+    // Firebase configuration (same as other pages)
     const firebaseConfig = {
       apiKey: "AIzaSyCmFpsG231lCdIJtHeN6mH-Bxd-LHzrgZg",
       authDomain: "eventsearchprototype.firebaseapp.com",
@@ -79,21 +78,21 @@
   <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0"></script>
   <script>
     let map, marker;
-    // Initialize the map in the mapContainer element
+    // Initialize map in the mapContainer element
     window.initMap = function() {
       const mapDiv = document.getElementById("mapContainer");
       if (!mapDiv) {
-        console.error("Error: 'mapContainer' div not found!");
+        console.error("Error: 'mapContainer' not found!");
         return;
       }
-      const defaultLoc = { lat: 37.7749, lng: -122.4194 }; // Default location (San Francisco)
+      const defaultLoc = { lat: 37.7749, lng: -122.4194 }; // Default to San Francisco
       map = new google.maps.Map(mapDiv, {
         center: defaultLoc,
         zoom: 12,
       });
     };
 
-    // Function to update the map with event location
+    // Update map with event coordinates
     function setEventLocationOnMap(lat, lng) {
       const location = { lat: lat, lng: lng };
       if (map) {
@@ -108,6 +107,38 @@
         }
       }
     }
+    
+    // Helper function to get ordinal suffix for day numbers
+    function getOrdinal(day) {
+      if (day > 3 && day < 21) return day + "th"; // covers 4th-20th
+      switch (day % 10) {
+        case 1: return day + "st";
+        case 2: return day + "nd";
+        case 3: return day + "rd";
+        default: return day + "th";
+      }
+    }
+    
+    // Format date and time (assumes date in "YYYY-MM-DD" and time in "HH:mm")
+    function formatDateTime(dateStr, timeStr) {
+      const [year, month, day] = dateStr.split("-").map(Number);
+      const [hourStr, minute] = timeStr.split(":").map(Number);
+      
+      // Create a Date object (month is 0-indexed)
+      const dateObj = new Date(year, month - 1, day, hourStr, minute);
+      
+      // Format date parts
+      const dayFormatted = getOrdinal(dateObj.getDate());
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const monthFormatted = monthNames[dateObj.getMonth()];
+      
+      // Format time
+      let hour = dateObj.getHours();
+      const ampm = hour >= 12 ? "PM" : "AM";
+      hour = hour % 12 || 12; // Convert 0 to 12 and 13 to 1, etc.
+      
+      return `${dayFormatted} ${monthFormatted} ${dateObj.getFullYear()} at ${hour}:${("0" + dateObj.getMinutes()).slice(-2)} ${ampm}`;
+    }
   </script>
 </head>
 <body>
@@ -121,28 +152,28 @@
   </header>
   
   <div class="container">
-    <!-- Scrollable Images Banner -->
+    <!-- Images Banner -->
     <div id="imageBanner">
-      <!-- Images will be injected here -->
+      <!-- Images will be inserted here dynamically -->
     </div>
     
     <!-- Event Title -->
     <h1 id="eventTitle">Loading Event...</h1>
     
     <!-- Date & Time Section -->
-    <div class="section" id="dateTimeSection">
+    <div class="section">
       <h2>Date & Time</h2>
       <p id="eventDateTime">Loading...</p>
     </div>
     
     <!-- Location Section -->
-    <div class="section" id="locationSection">
+    <div class="section">
       <h2>Location</h2>
       <p id="eventLocation">Loading...</p>
     </div>
     
     <!-- Description Section -->
-    <div class="section" id="descriptionSection">
+    <div class="section">
       <h2>Description</h2>
       <p id="eventDescription">Loading...</p>
     </div>
@@ -155,9 +186,9 @@
   </div>
   
   <script>
-    // Wait for DOM content to load
+    // Wait until DOM content loads
     document.addEventListener("DOMContentLoaded", async () => {
-      // Get event ID from URL parameters
+      // Extract eventId from URL query parameters
       const params = new URLSearchParams(window.location.search);
       const eventId = params.get("id");
       if (!eventId) {
@@ -166,7 +197,7 @@
       }
       
       try {
-        // Fetch the event document from Firestore
+        // Fetch event data from Firestore
         const doc = await db.collection("events").doc(eventId).get();
         if (!doc.exists) {
           document.querySelector(".container").innerHTML = "<p>Event not found.</p>";
@@ -174,7 +205,7 @@
         }
         const eventData = doc.data();
         
-        // Update the images banner
+        // Update Images Banner
         const imageBanner = document.getElementById("imageBanner");
         imageBanner.innerHTML = "";
         if (eventData.imageUrls && eventData.imageUrls.length > 0) {
@@ -188,25 +219,31 @@
           imageBanner.innerHTML = "<p>No images available.</p>";
         }
         
-        // Update event title
+        // Update Event Title
         document.getElementById("eventTitle").textContent = eventData.title || "Untitled Event";
         
-        // Update Date & Time Section
-        const dateTimeText = `${eventData.date || "No date provided"} ${eventData.time || ""}`;
-        document.getElementById("eventDateTime").textContent = dateTimeText;
+        // Format and Update Date & Time
+        const formattedDateTime = eventData.date && eventData.time
+          ? formatDateTime(eventData.date, eventData.time)
+          : "No date/time provided";
+        document.getElementById("eventDateTime").textContent = formattedDateTime;
         
-        // Update Location Section
+        // Update Location
         document.getElementById("eventLocation").textContent = eventData.location || "No location provided";
         
-        // Update Description Section
-        document.getElementById("eventDescription").textContent = eventData.description || "No description provided.";
+        // Update Description
+        document.getElementById("eventDescription").textContent = eventData.description || "No description available";
         
-        // Initialize the map if not already initialized
+        // Initialize the map if not already done
         if (!map) {
           initMap();
-        }
-        // If eventData includes lat and lng, update the map
-        if (eventData.lat && eventData.lng) {
+          // Wait a moment for map to initialize
+          setTimeout(() => {
+            if (eventData.lat && eventData.lng) {
+              setEventLocationOnMap(eventData.lat, eventData.lng);
+            }
+          }, 1000);
+        } else if (eventData.lat && eventData.lng) {
           setEventLocationOnMap(eventData.lat, eventData.lng);
         }
       } catch (error) {
