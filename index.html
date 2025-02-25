@@ -5,12 +5,11 @@
   <title>Event Search Prototype</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <!-- Firebase SDK (using module syntax) -->
-  <script type="module">
-    // Import the functions needed from Firebase SDK
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
-    import { getFirestore } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
-    // Your Firebase configuration (as provided)
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script>
+    // Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyCmFpsG231lCdIJtHeN6mH-Bxd-LHzrgZg",
       authDomain: "eventsearchprototype.firebaseapp.com",
@@ -20,18 +19,12 @@
       appId: "1:1090688920321:web:3b6c399e2686e1e2718900",
       measurementId: "G-KRG9R9WBF2"
     };
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    // Initialize Firestore and attach it to the window object for global access
-    window.db = getFirestore(app);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
   </script>
-  
-  <!-- Google Maps API (if needed on other pages; not used on homepage) -->
-  <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0&callback=initMap"></script>
   
   <!-- CSS Styles -->
   <style>
-    /* Global Styles */
     body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; }
     header { background: #fff; padding: 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     nav a { margin: 0 10px; text-decoration: none; color: #333; }
@@ -74,51 +67,50 @@
   </div>
   
   <!-- Main Script: Fetch and render events from Firestore -->
-  <script type="module">
-    import { collection, getDocs, orderBy, query } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
-    
+  <script>
+    // For Firestore queries, we use the compat version; no module imports here.
     let currentFilter = 'all';
     let currentQuery = "";
     
     async function loadEvents() {
       try {
-        // Create a query to get events ordered by createdAt descending
-        const q = query(collection(window.db, "events"), orderBy("createdAt", "desc"));
-        const querySnapshot = await getDocs(q);
+        // Get all events from the "events" collection
+        const snapshot = await db.collection("events").get();
         const events = [];
-        querySnapshot.forEach((doc) => {
-          let data = doc.data();
+        snapshot.forEach(doc => {
+          const data = doc.data();
           data.id = doc.id;
-          // If type not set, default to "event"
+          // Ensure type is set; default to "event"
           data.type = data.type || "event";
           events.push(data);
         });
         renderItems(events);
       } catch (error) {
-        console.error("Error fetching events: ", error);
+        console.error("Error fetching events:", error);
       }
     }
     
     function renderItems(events) {
-      const eventList = document.getElementById('eventList');
+      const eventList = document.getElementById("eventList");
       eventList.innerHTML = "";
       const filteredItems = events.filter(item => {
-        const matchesQuery = item.title.toLowerCase().includes(currentQuery) || item.description.toLowerCase().includes(currentQuery);
-        const matchesType = currentFilter === 'all' ? true : item.type === currentFilter;
+        const matchesQuery = item.title.toLowerCase().includes(currentQuery) ||
+                             item.description.toLowerCase().includes(currentQuery);
+        const matchesType = currentFilter === "all" ? true : item.type === currentFilter;
         return matchesQuery && matchesType;
       });
       
       if (filteredItems.length === 0) {
-        eventList.innerHTML = "<p style='text-align:center;'>No results found.</p>";
+        eventList.innerHTML = "<p style='text-align:center;'>No events found.</p>";
         return;
       }
       
       filteredItems.forEach(item => {
-        const card = document.createElement('div');
-        card.className = 'event-card';
-        card.onclick = () => { window.location.href = `event.html?id=${item.id}`; };
+        const card = document.createElement("div");
+        card.className = "event-card";
+        card.onclick = () => { window.location.href = "event.html?id=" + item.id; };
         card.innerHTML = `
-          <img src="${item.imageUrls && item.imageUrls.length > 0 ? item.imageUrls[0] : 'https://via.placeholder.com/300x150'}" alt="${item.title}">
+          <img src="${item.imageUrls && item.imageUrls.length > 0 ? item.imageUrls[0] : "https://via.placeholder.com/300x150"}" alt="${item.title}">
           <h3>${item.title}</h3>
           ${item.date ? `<p><strong>Date:</strong> ${item.date} ${item.time || ""}</p>` : ""}
           <p><strong>Location:</strong> ${item.location}</p>
@@ -130,23 +122,23 @@
     
     function filterType(type) {
       currentFilter = type;
-      document.getElementById('btnAll').classList.remove('active');
-      document.getElementById('btnEvents').classList.remove('active');
-      document.getElementById('btnPlaces').classList.remove('active');
+      document.getElementById("btnAll").classList.remove("active");
+      document.getElementById("btnEvents").classList.remove("active");
+      document.getElementById("btnPlaces").classList.remove("active");
       
-      if (type === 'all') document.getElementById('btnAll').classList.add('active');
-      if (type === 'event') document.getElementById('btnEvents').classList.add('active');
-      if (type === 'place') document.getElementById('btnPlaces').classList.add('active');
+      if (type === "all") document.getElementById("btnAll").classList.add("active");
+      if (type === "event") document.getElementById("btnEvents").classList.add("active");
+      if (type === "place") document.getElementById("btnPlaces").classList.add("active");
       
       loadEvents();
     }
     
-    document.getElementById('searchInput').addEventListener('input', function(e) {
+    document.getElementById("searchInput").addEventListener("input", function(e) {
       currentQuery = e.target.value.toLowerCase();
       loadEvents();
     });
     
-    // Initial load of events from Firestore
+    // Initial load of events
     loadEvents();
   </script>
 </body>
