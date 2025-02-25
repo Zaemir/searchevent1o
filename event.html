@@ -5,20 +5,63 @@
   <title>Event Details</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* Basic styling for the event details page */
+    /* Basic styling */
     body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; }
     header { background: #fff; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     nav a { margin: 0 10px; text-decoration: none; color: #333; }
     .container { width: 90%; max-width: 800px; margin: 20px auto; background: #fff; padding: 20px; border-radius: 5px; }
-    #mediaContainer img { width: 100%; margin-bottom: 10px; border-radius: 5px; }
-    #mapContainer { width: 100%; height: 300px; margin-top: 15px; }
+    
+    /* Scrollable images banner */
+    #imageBanner {
+      display: flex;
+      overflow-x: auto;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+    }
+    #imageBanner img {
+      height: 200px;
+      border-radius: 5px;
+    }
+    
+    /* Event Title */
+    #eventTitle {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      color: #333;
+    }
+    
+    /* Detail sections */
+    .section {
+      margin-bottom: 20px;
+    }
+    .section h2 {
+      font-size: 1.2em;
+      margin-bottom: 5px;
+      color: #555;
+      border-bottom: 2px solid #ddd;
+      padding-bottom: 5px;
+    }
+    .section p {
+      font-size: 1em;
+      color: #444;
+      margin: 0;
+    }
+    
+    /* Map container */
+    #mapContainer {
+      width: 100%;
+      height: 300px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
   </style>
   
-  <!-- Firebase SDK (compat version) -->
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script>
-    // Firebase configuration (same as used in your other pages)
+    // Firebase configuration (same as used in other pages)
     const firebaseConfig = {
       apiKey: "AIzaSyCmFpsG231lCdIJtHeN6mH-Bxd-LHzrgZg",
       authDomain: "eventsearchprototype.firebaseapp.com",
@@ -32,35 +75,34 @@
     const db = firebase.firestore();
   </script>
   
-  <!-- Google Maps API (using your provided key) -->
+  <!-- Google Maps API with async and defer -->
   <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0"></script>
   <script>
     let map, marker;
-    
-    // Initialize the map; defined globally so that it can be used in the callback
+    // Initialize the map in the mapContainer element
     window.initMap = function() {
       const mapDiv = document.getElementById("mapContainer");
       if (!mapDiv) {
         console.error("Error: 'mapContainer' div not found!");
         return;
       }
-      const defaultLoc = { lat: 37.7749, lng: -122.4194 }; // Default center (San Francisco)
+      const defaultLoc = { lat: 37.7749, lng: -122.4194 }; // Default location (San Francisco)
       map = new google.maps.Map(mapDiv, {
         center: defaultLoc,
         zoom: 12,
       });
     };
 
-    // Function to update the map based on event's location
+    // Function to update the map with event location
     function setEventLocationOnMap(lat, lng) {
-      const loc = { lat: lat, lng: lng };
+      const location = { lat: lat, lng: lng };
       if (map) {
-        map.setCenter(loc);
+        map.setCenter(location);
         if (marker) {
-          marker.setPosition(loc);
+          marker.setPosition(location);
         } else {
           marker = new google.maps.Marker({
-            position: loc,
+            position: location,
             map: map,
           });
         }
@@ -79,20 +121,43 @@
   </header>
   
   <div class="container">
-    <h1 id="eventTitle">Event Title</h1>
-    <p id="eventDateTime"><strong>Date & Time:</strong></p>
-    <p id="eventLocation"><strong>Location:</strong></p>
-    <div id="mediaContainer">
-      <!-- Images and videos will be injected here -->
+    <!-- Scrollable Images Banner -->
+    <div id="imageBanner">
+      <!-- Images will be injected here -->
     </div>
-    <p id="eventDescription">Event Description</p>
-    <div id="mapContainer"></div>
+    
+    <!-- Event Title -->
+    <h1 id="eventTitle">Loading Event...</h1>
+    
+    <!-- Date & Time Section -->
+    <div class="section" id="dateTimeSection">
+      <h2>Date & Time</h2>
+      <p id="eventDateTime">Loading...</p>
+    </div>
+    
+    <!-- Location Section -->
+    <div class="section" id="locationSection">
+      <h2>Location</h2>
+      <p id="eventLocation">Loading...</p>
+    </div>
+    
+    <!-- Description Section -->
+    <div class="section" id="descriptionSection">
+      <h2>Description</h2>
+      <p id="eventDescription">Loading...</p>
+    </div>
+    
+    <!-- Map Section -->
+    <div class="section">
+      <h2>Map</h2>
+      <div id="mapContainer"></div>
+    </div>
   </div>
   
   <script>
-    // Ensure DOM content is loaded before fetching event data
+    // Wait for DOM content to load
     document.addEventListener("DOMContentLoaded", async () => {
-      // Extract eventId from URL query parameters
+      // Get event ID from URL parameters
       const params = new URLSearchParams(window.location.search);
       const eventId = params.get("id");
       if (!eventId) {
@@ -109,38 +174,39 @@
         }
         const eventData = doc.data();
         
-        // Update page elements with event data
-        document.getElementById("eventTitle").textContent = eventData.title || "Untitled Event";
-        document.getElementById("eventDateTime").innerHTML = `<strong>Date & Time:</strong> ${eventData.date || ""} ${eventData.time || ""}`;
-        document.getElementById("eventLocation").innerHTML = `<strong>Location:</strong> ${eventData.location || ""}`;
-        document.getElementById("eventDescription").textContent = eventData.description || "";
-        
-        // Display images from eventData.imageUrls (if available)
-        const mediaContainer = document.getElementById("mediaContainer");
-        mediaContainer.innerHTML = "";
+        // Update the images banner
+        const imageBanner = document.getElementById("imageBanner");
+        imageBanner.innerHTML = "";
         if (eventData.imageUrls && eventData.imageUrls.length > 0) {
           eventData.imageUrls.forEach(url => {
             const img = document.createElement("img");
             img.src = url;
             img.alt = eventData.title;
-            mediaContainer.appendChild(img);
+            imageBanner.appendChild(img);
           });
         } else {
-          mediaContainer.innerHTML = "<p>No media available.</p>";
+          imageBanner.innerHTML = "<p>No images available.</p>";
         }
         
-        // Initialize the map (if not already initialized)
+        // Update event title
+        document.getElementById("eventTitle").textContent = eventData.title || "Untitled Event";
+        
+        // Update Date & Time Section
+        const dateTimeText = `${eventData.date || "No date provided"} ${eventData.time || ""}`;
+        document.getElementById("eventDateTime").textContent = dateTimeText;
+        
+        // Update Location Section
+        document.getElementById("eventLocation").textContent = eventData.location || "No location provided";
+        
+        // Update Description Section
+        document.getElementById("eventDescription").textContent = eventData.description || "No description provided.";
+        
+        // Initialize the map if not already initialized
         if (!map) {
-          // If Google Maps hasn't loaded yet, wait a bit then call initMap
-          setTimeout(() => {
-            if (typeof window.initMap === "function") {
-              window.initMap();
-              if (eventData.lat && eventData.lng) {
-                setEventLocationOnMap(eventData.lat, eventData.lng);
-              }
-            }
-          }, 2000);
-        } else if (eventData.lat && eventData.lng) {
+          initMap();
+        }
+        // If eventData includes lat and lng, update the map
+        if (eventData.lat && eventData.lng) {
           setEventLocationOnMap(eventData.lat, eventData.lng);
         }
       } catch (error) {
