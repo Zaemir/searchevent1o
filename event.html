@@ -5,14 +5,68 @@
   <title>Event Details</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    /* Basic styling for the event details page */
     body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; }
     header { background: #fff; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     nav a { margin: 0 10px; text-decoration: none; color: #333; }
     .container { width: 90%; max-width: 800px; margin: 20px auto; background: #fff; padding: 20px; border-radius: 5px; }
-    .media { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
-    .media img { max-width: 100%; border-radius: 5px; }
-    .map { width: 100%; height: 300px; margin-top: 20px; }
+    #mediaContainer img { width: 100%; margin-bottom: 10px; border-radius: 5px; }
+    #mapContainer { width: 100%; height: 300px; margin-top: 15px; }
   </style>
+  
+  <!-- Firebase SDK (compat version) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script>
+    // Firebase configuration (same as used in your other pages)
+    const firebaseConfig = {
+      apiKey: "AIzaSyCmFpsG231lCdIJtHeN6mH-Bxd-LHzrgZg",
+      authDomain: "eventsearchprototype.firebaseapp.com",
+      projectId: "eventsearchprototype",
+      storageBucket: "eventsearchprototype.firebasestorage.app",
+      messagingSenderId: "1090688920321",
+      appId: "1:1090688920321:web:3b6c399e2686e1e2718900",
+      measurementId: "G-KRG9R9WBF2"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+  </script>
+  
+  <!-- Google Maps API (using your provided key) -->
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0"></script>
+  <script>
+    let map, marker;
+    
+    // Initialize the map; defined globally so that it can be used in the callback
+    window.initMap = function() {
+      const mapDiv = document.getElementById("mapContainer");
+      if (!mapDiv) {
+        console.error("Error: 'mapContainer' div not found!");
+        return;
+      }
+      const defaultLoc = { lat: 37.7749, lng: -122.4194 }; // Default center (San Francisco)
+      map = new google.maps.Map(mapDiv, {
+        center: defaultLoc,
+        zoom: 12,
+      });
+    };
+
+    // Function to update the map based on event's location
+    function setEventLocationOnMap(lat, lng) {
+      const loc = { lat: lat, lng: lng };
+      if (map) {
+        map.setCenter(loc);
+        if (marker) {
+          marker.setPosition(loc);
+        } else {
+          marker = new google.maps.Marker({
+            position: loc,
+            map: map,
+          });
+        }
+      }
+    }
+  </script>
 </head>
 <body>
   <header>
@@ -23,78 +77,77 @@
       <a href="contact.html">Contact</a>
     </nav>
   </header>
+  
   <div class="container">
     <h1 id="eventTitle">Event Title</h1>
-    <p id="eventDateTime"><strong>Date & Time:</strong> </p>
-    <p id="eventLocation"><strong>Location:</strong> </p>
-    <div class="media" id="mediaContainer">
-      <!-- Images/Videos will be inserted here -->
+    <p id="eventDateTime"><strong>Date & Time:</strong></p>
+    <p id="eventLocation"><strong>Location:</strong></p>
+    <div id="mediaContainer">
+      <!-- Images and videos will be injected here -->
     </div>
     <p id="eventDescription">Event Description</p>
-    <div class="map" id="mapContainer">
-      <!-- Embedded map will appear here -->
-    </div>
+    <div id="mapContainer"></div>
   </div>
   
   <script>
-    // Sample events data with extra media and map embed
-    const eventsData = [
-      {
-        id: 1,
-        type: 'event',
-        title: "Art Exhibition",
-        date: "2025-03-10 18:00",
-        location: "Art Gallery, Downtown",
-        description: "Modern art exhibition featuring local artists. Enjoy a visual treat!",
-        image: "https://via.placeholder.com/300x150?text=Art+Exhibition",
-        media: [
-          "https://via.placeholder.com/300x200?text=Artwork+1",
-          "https://via.placeholder.com/300x200?text=Artwork+2",
-          "https://via.placeholder.com/300x200?text=Artwork+3"
-        ],
-        mapEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3153.125194305401!2d-122.41941508468264!3d37.77492927975901!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8085809c7c0d0b5b%3A0xe3d8c8eeb7b3b5d9!2sArt%20Gallery!5e0!3m2!1sen!2sus!4v1600000000000"
-      },
-      {
-        id: 2,
-        type: 'event',
-        title: "Music Concert",
-        date: "2025-03-12 20:00",
-        location: "City Arena",
-        description: "Live concert featuring top local bands.",
-        image: "https://via.placeholder.com/300x150?text=Music+Concert",
-        media: [
-          "https://via.placeholder.com/300x200?text=Concert+1",
-          "https://via.placeholder.com/300x200?text=Concert+2"
-        ],
-        mapEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3153.125194305401!2d-122.41941508468264!3d37.77492927975901!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8085809c7c0d0b5b%3A0xe3d8c8eeb7b3b5d9!2sCity%20Arena!5e0!3m2!1sen!2sus!4v1600000000000"
+    // Ensure DOM content is loaded before fetching event data
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Extract eventId from URL query parameters
+      const params = new URLSearchParams(window.location.search);
+      const eventId = params.get("id");
+      if (!eventId) {
+        document.querySelector(".container").innerHTML = "<p>No event ID provided.</p>";
+        return;
       }
-    ];
-    
-    // Retrieve event ID from query string
-    const urlParams = new URLSearchParams(window.location.search);
-    const eventId = parseInt(urlParams.get('id'));
-    const eventItem = eventsData.find(e => e.id === eventId);
-    
-    if(eventItem) {
-      document.getElementById('eventTitle').textContent = eventItem.title;
-      document.getElementById('eventDateTime').innerHTML = "<strong>Date & Time:</strong> " + eventItem.date;
-      document.getElementById('eventLocation').innerHTML = "<strong>Location:</strong> " + eventItem.location;
-      document.getElementById('eventDescription').textContent = eventItem.description;
       
-      // Render media images
-      const mediaContainer = document.getElementById('mediaContainer');
-      eventItem.media.forEach(url => {
-        const img = document.createElement('img');
-        img.src = url;
-        img.alt = eventItem.title;
-        mediaContainer.appendChild(img);
-      });
-      
-      // Embed map
-      document.getElementById('mapContainer').innerHTML = `<iframe src="${eventItem.mapEmbed}" width="100%" height="100%" frameborder="0" style="border:0;" allowfullscreen="" aria-hidden="false" tabindex="0"></iframe>`;
-    } else {
-      document.querySelector('.container').innerHTML = "<p>Event not found.</p>";
-    }
+      try {
+        // Fetch the event document from Firestore
+        const doc = await db.collection("events").doc(eventId).get();
+        if (!doc.exists) {
+          document.querySelector(".container").innerHTML = "<p>Event not found.</p>";
+          return;
+        }
+        const eventData = doc.data();
+        
+        // Update page elements with event data
+        document.getElementById("eventTitle").textContent = eventData.title || "Untitled Event";
+        document.getElementById("eventDateTime").innerHTML = `<strong>Date & Time:</strong> ${eventData.date || ""} ${eventData.time || ""}`;
+        document.getElementById("eventLocation").innerHTML = `<strong>Location:</strong> ${eventData.location || ""}`;
+        document.getElementById("eventDescription").textContent = eventData.description || "";
+        
+        // Display images from eventData.imageUrls (if available)
+        const mediaContainer = document.getElementById("mediaContainer");
+        mediaContainer.innerHTML = "";
+        if (eventData.imageUrls && eventData.imageUrls.length > 0) {
+          eventData.imageUrls.forEach(url => {
+            const img = document.createElement("img");
+            img.src = url;
+            img.alt = eventData.title;
+            mediaContainer.appendChild(img);
+          });
+        } else {
+          mediaContainer.innerHTML = "<p>No media available.</p>";
+        }
+        
+        // Initialize the map (if not already initialized)
+        if (!map) {
+          // If Google Maps hasn't loaded yet, wait a bit then call initMap
+          setTimeout(() => {
+            if (typeof window.initMap === "function") {
+              window.initMap();
+              if (eventData.lat && eventData.lng) {
+                setEventLocationOnMap(eventData.lat, eventData.lng);
+              }
+            }
+          }, 2000);
+        } else if (eventData.lat && eventData.lng) {
+          setEventLocationOnMap(eventData.lat, eventData.lng);
+        }
+      } catch (error) {
+        console.error("Error fetching event:", error);
+        document.querySelector(".container").innerHTML = "<p>Error loading event details.</p>";
+      }
+    });
   </script>
 </body>
 </html>
