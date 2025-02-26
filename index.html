@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Event Search Prototype</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -22,7 +22,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
   </script>
-  
+
   <!-- CSS Styles -->
   <style>
     /* Base styles */
@@ -171,10 +171,9 @@
     let currentCountry = "";
     let currentCity = "";
     
-    // Sample mapping for Pakistan provinces and their major cities.
-    // For a robust solution, consider using an external dataset or API.
+    // Sample mapping for Pakistan provinces and major cities
     const pakistanData = {
-      "Punjab": ["Lahore", "Faisalabad", "Sialkot", "Rawalpindi", "Gujranwala"],
+      "Punjab": ["Lahore", "Faisalabad", "Rawalpindi", "Gujranwala", "Sialkot"],
       "Sindh": ["Karachi", "Hyderabad", "Sukkur"],
       "Khyber Pakhtunkhwa": ["Peshawar", "Abbottabad", "Mardan"],
       "Balochistan": ["Quetta", "Gwadar"]
@@ -263,7 +262,7 @@
         loadEvents();
       });
       
-      // Province filter listener (for Pakistan, we use provinces)
+      // Province filter listener
       document.getElementById("countryFilter").addEventListener("change", function(e) {
         currentCountry = e.target.value;
         updateCityDropdown(currentCountry);
@@ -278,17 +277,17 @@
         loadEvents();
       });
       
-      // Auto-detect location using a CORS-friendly API (ipwhois alternative: ipwhois.app)
+      // Auto-detect location using a CORS-friendly API (ipwhois.app)
       fetch("https://ipwhois.app/json/")
         .then(response => response.json())
         .then(data => {
-          if (data.country === "Pakistan") {
-            // If the API returns region (province) and city, use them
-            if (data.region) {
-              document.getElementById("countryFilter").value = data.region;
-              currentCountry = data.region;
-              updateCityDropdown(data.region);
-            }
+          // For this demo, we assume the app is for Pakistan
+          if (data.country_code === "PK") {
+            // Use region as province if available, else default to Punjab
+            const province = data.region || "Punjab";
+            document.getElementById("countryFilter").value = province;
+            currentCountry = province;
+            updateCityDropdown(province);
             if (data.city) {
               document.getElementById("cityFilter").value = data.city;
               currentCity = data.city;
@@ -327,7 +326,7 @@
         </select>
         <select id="cityFilter">
           <option value="">Select City</option>
-          <!-- Cities will be populated based on province selection -->
+          <!-- Cities will be populated dynamically -->
         </select>
       </div>
     </div>
@@ -339,7 +338,7 @@
     </div>
     
     <div class="event-list" id="eventList">
-      <!-- Event cards will be dynamically injected here from Firestore -->
+      <!-- Event cards will be dynamically injected here -->
     </div>
   </div>
 </body>
