@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Event Search Prototype</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -22,7 +22,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
   </script>
-  
+
   <!-- CSS Styles -->
   <style>
     /* Base styles */
@@ -181,7 +181,7 @@
     let currentCountry = "";
     let currentCity = "";
     
-    // Static mapping for Pakistan provinces and major cities (including Sialkot in Punjab)
+    // Static mapping for Pakistan provinces and major cities (including Sialkot)
     const pakistanData = {
       "Punjab": ["Lahore", "Faisalabad", "Rawalpindi", "Gujranwala", "Sialkot"],
       "Sindh": ["Karachi", "Hyderabad", "Sukkur"],
@@ -213,10 +213,9 @@
           data.type = data.type || "event";
           events.push(data);
         });
-        // Depending on whether a search query is entered, apply filtering differently:
         let filteredItems = [];
         if (currentQuery) {
-          // If search query is non-empty, filter by text and then sort so that events matching currentCity come first.
+          // Filter by search query (and sort by matching city if selected)
           filteredItems = events.filter(item =>
             item.title.toLowerCase().includes(currentQuery) ||
             item.description.toLowerCase().includes(currentQuery)
@@ -229,7 +228,7 @@
             });
           }
         } else {
-          // If search query is empty, filter by location if set.
+          // If no search query, filter by location if set
           filteredItems = events.filter(item => {
             let matches = true;
             if (currentCountry) {
@@ -240,6 +239,10 @@
             }
             return matches;
           });
+          // Fallback: if no events match location, show all events
+          if (filteredItems.length === 0) {
+            filteredItems = events;
+          }
         }
         renderItems(filteredItems);
         renderRecommendations(filteredItems);
@@ -273,9 +276,10 @@
       });
     }
     
-    // Render a simple recommendation section (show up to 3 events from the filtered list)
+    // Render a recommendations section (up to 3 events)
     function renderRecommendations(events) {
       const recContainer = document.getElementById("recommendationList");
+      if (!recContainer) return; // Skip if recommendation container not present
       recContainer.innerHTML = "";
       if (events.length === 0) {
         recContainer.innerHTML = "<p>No recommendations available.</p>";
@@ -310,6 +314,33 @@
       loadEvents();
     }
     
+    // Helper functions for date formatting
+    function getOrdinal(day) {
+      if (day > 3 && day < 21) return day + "th";
+      switch (day % 10) {
+        case 1: return day + "st";
+        case 2: return day + "nd";
+        case 3: return day + "rd";
+        default: return day + "th";
+      }
+    }
+    
+    function formatDateTime(dateStr, timeStr) {
+      const [year, month, day] = dateStr.split("-").map(Number);
+      const [hour, minute] = timeStr.split(":").map(Number);
+      const dateObj = new Date(year, month - 1, day, hour, minute);
+      
+      const dayFormatted = getOrdinal(dateObj.getDate());
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const monthFormatted = monthNames[dateObj.getMonth()];
+      
+      let hourFormatted = dateObj.getHours();
+      const ampm = hourFormatted >= 12 ? "PM" : "AM";
+      hourFormatted = hourFormatted % 12 || 12;
+      
+      return `${dayFormatted} ${monthFormatted} ${dateObj.getFullYear()} at ${hourFormatted}:${("0" + dateObj.getMinutes()).slice(-2)} ${ampm}`;
+    }
+    
     document.addEventListener("DOMContentLoaded", () => {
       // Search input listener
       document.getElementById("searchInput").addEventListener("input", function(e) {
@@ -336,9 +367,8 @@
       fetch("https://ipwhois.app/json/")
         .then(response => response.json())
         .then(data => {
-          // Ensure we're in Pakistan
           if (data.country_code === "PK") {
-            // Use region as province if available, else default to Punjab
+            // Use region if available; if not, default to Punjab
             const province = data.region || "Punjab";
             document.getElementById("countryFilter").value = province;
             currentCountry = province;
@@ -396,7 +426,6 @@
       <!-- Event cards will be dynamically injected here -->
     </div>
     
-    <!-- Recommended Events Section -->
     <div class="recommendations" id="recommendations">
       <h2>Recommended Events</h2>
       <div class="event-list" id="recommendationList">
