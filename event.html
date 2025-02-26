@@ -6,12 +6,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     /* Base styles */
-    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; }
-    header { background: #fff; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    nav a { margin: 0 10px; text-decoration: none; color: #333; }
-    .container { width: 90%; max-width: 800px; margin: 20px auto; background: #fff; padding: 20px; border-radius: 5px; }
-    
-    /* Images banner */
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+    }
+    header {
+      background: #fff;
+      padding: 15px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    nav a {
+      margin: 0 10px;
+      text-decoration: none;
+      color: #333;
+    }
+    .container {
+      width: 90%;
+      max-width: 800px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 5px;
+    }
+    /* Image Banner */
     #imageBanner {
       display: flex;
       overflow-x: auto;
@@ -23,14 +41,12 @@
       border-radius: 5px;
       object-fit: cover;
     }
-    
-    /* Event title */
+    /* Event Title */
     #eventTitle {
       font-size: 2em;
       margin: 10px 0;
       color: #333;
     }
-    
     /* Section styling */
     .section {
       margin-bottom: 20px;
@@ -46,7 +62,6 @@
       margin: 0;
       line-height: 1.5;
     }
-    
     /* Map container */
     #mapContainer {
       width: 100%;
@@ -60,7 +75,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script>
-    // Firebase configuration
+    // Firebase configuration (same as your other pages)
     const firebaseConfig = {
       apiKey: "AIzaSyCmFpsG231lCdIJtHeN6mH-Bxd-LHzrgZg",
       authDomain: "eventsearchprototype.firebaseapp.com",
@@ -76,23 +91,24 @@
   
   <!-- Google Maps API with async and defer -->
   <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0"></script>
+  
   <script>
     let map, marker;
-    // Initialize map in the mapContainer element
+    // Define initMap in the global scope so it's accessible once the API loads.
     window.initMap = function() {
       const mapDiv = document.getElementById("mapContainer");
       if (!mapDiv) {
         console.error("Error: 'mapContainer' not found!");
         return;
       }
-      const defaultLoc = { lat: 37.7749, lng: -122.4194 }; // Default center (San Francisco)
+      const defaultLoc = { lat: 37.7749, lng: -122.4194 }; // Default center: San Francisco
       map = new google.maps.Map(mapDiv, {
         center: defaultLoc,
         zoom: 12,
       });
     };
 
-    // Function to update the map based on event coordinates
+    // Update the map with event location
     function setEventLocationOnMap(lat, lng) {
       const location = { lat: lat, lng: lng };
       if (map) {
@@ -107,8 +123,8 @@
         }
       }
     }
-    
-    // Helper: Get ordinal suffix for a day
+
+    // Helper: Get ordinal suffix for day numbers
     function getOrdinal(day) {
       if (day > 3 && day < 21) return day + "th";
       switch (day % 10) {
@@ -118,7 +134,7 @@
         default: return day + "th";
       }
     }
-    
+
     // Format the date/time into a friendly string (e.g., "8th Nov 2025 at 10:00 PM")
     function formatDateTime(dateStr, timeStr) {
       const [year, month, day] = dateStr.split("-").map(Number);
@@ -136,11 +152,12 @@
       return `${dayFormatted} ${monthFormatted} ${dateObj.getFullYear()} at ${hour}:${("0" + dateObj.getMinutes()).slice(-2)} ${ampm}`;
     }
     
-    // Initialize map and add listeners after DOM loads
-    document.addEventListener("DOMContentLoaded", async () => {
+    // Wait until the page fully loads, then fetch event data and update UI
+    window.onload = function() {
+      // Initialize Google Map
       initMap();
       
-      // Get event ID from URL
+      // Extract event ID from URL parameters
       const params = new URLSearchParams(window.location.search);
       const eventId = params.get("id");
       if (!eventId) {
@@ -148,52 +165,53 @@
         return;
       }
       
-      try {
-        // Fetch event from Firestore
-        const doc = await db.collection("events").doc(eventId).get();
-        if (!doc.exists) {
-          document.querySelector(".container").innerHTML = "<p>Event not found.</p>";
-          return;
-        }
-        const eventData = doc.data();
-        
-        // Update Images Banner using dummyimage.com as placeholder
-        const imageBanner = document.getElementById("imageBanner");
-        imageBanner.innerHTML = "";
-        if (eventData.imageUrls && eventData.imageUrls.length > 0) {
-          eventData.imageUrls.forEach(url => {
-            const img = document.createElement("img");
-            // If using placeholder images, you can construct URL with dummyimage.com:
-            img.src = url.replace("via.placeholder.com", "dummyimage.com");
-            img.alt = eventData.title;
-            imageBanner.appendChild(img);
-          });
-        } else {
-          imageBanner.innerHTML = "<p>No images available.</p>";
-        }
-        
-        // Update event title
-        document.getElementById("eventTitle").textContent = eventData.title || "Untitled Event";
-        
-        // Format and update Date & Time
-        const formattedDateTime = (eventData.date && eventData.time)
-          ? formatDateTime(eventData.date, eventData.time)
-          : "No date/time provided";
-        document.getElementById("eventDateTime").textContent = formattedDateTime;
-        
-        // Update Location and Description
-        document.getElementById("eventLocation").textContent = eventData.location || "No location provided";
-        document.getElementById("eventDescription").textContent = eventData.description || "No description available.";
-        
-        // If geographical coordinates are available, update the map
-        if (eventData.lat && eventData.lng) {
-          setEventLocationOnMap(eventData.lat, eventData.lng);
-        }
-      } catch (error) {
-        console.error("Error fetching event:", error);
-        document.querySelector(".container").innerHTML = "<p>Error loading event details.</p>";
-      }
-    });
+      // Fetch event data from Firestore
+      db.collection("events").doc(eventId).get()
+        .then(doc => {
+          if (!doc.exists) {
+            document.querySelector(".container").innerHTML = "<p>Event not found.</p>";
+            return;
+          }
+          const eventData = doc.data();
+          
+          // Update Image Banner (using dummyimage.com for placeholders)
+          const imageBanner = document.getElementById("imageBanner");
+          imageBanner.innerHTML = "";
+          if (eventData.imageUrls && eventData.imageUrls.length > 0) {
+            eventData.imageUrls.forEach(url => {
+              const img = document.createElement("img");
+              // Replace via.placeholder.com with dummyimage.com
+              img.src = url.replace("via.placeholder.com", "dummyimage.com");
+              img.alt = eventData.title;
+              imageBanner.appendChild(img);
+            });
+          } else {
+            imageBanner.innerHTML = "<p>No images available.</p>";
+          }
+          
+          // Update Event Title
+          document.getElementById("eventTitle").textContent = eventData.title || "Untitled Event";
+          
+          // Format and update Date & Time
+          const formattedDateTime = (eventData.date && eventData.time)
+            ? formatDateTime(eventData.date, eventData.time)
+            : "No date/time provided";
+          document.getElementById("eventDateTime").textContent = formattedDateTime;
+          
+          // Update Location and Description
+          document.getElementById("eventLocation").textContent = eventData.location || "No location provided";
+          document.getElementById("eventDescription").textContent = eventData.description || "No description available.";
+          
+          // Update the Map with event location, if available
+          if (eventData.lat && eventData.lng) {
+            setEventLocationOnMap(eventData.lat, eventData.lng);
+          }
+        })
+        .catch(error => {
+          console.error("Error fetching event:", error);
+          document.querySelector(".container").innerHTML = "<p>Error loading event details.</p>";
+        });
+    };
   </script>
 </head>
 <body>
@@ -209,7 +227,7 @@
   <div class="container">
     <!-- Image Banner -->
     <div id="imageBanner">
-      <!-- Images will be inserted here -->
+      <!-- Images will be dynamically inserted here -->
     </div>
     
     <!-- Event Title -->
