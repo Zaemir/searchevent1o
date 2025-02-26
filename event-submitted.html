@@ -5,7 +5,7 @@
   <title>Event Submitted Successfully</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* Base styling for a centered success message */
+    /* Centered container with responsive text */
     body {
       font-family: Arial, sans-serif;
       background: #f4f4f4;
@@ -49,21 +49,22 @@
 <body>
   <div class="container">
     <h1>Event Submitted Successfully!</h1>
-    <p>Your event has been created. Click the button below to view your event.</p>
+    <p>Your event has been created successfully.</p>
     <a id="viewEventLink" href="#">View Your Event</a>
   </div>
-  
   <script>
-    // Extract the eventId from URL query parameters.
-    // Why? To dynamically generate the link to the event details page.
+    // Extract eventId from the URL query parameters.
+    // This solves the error where the submitted page couldn't find the event ID.
     const params = new URLSearchParams(window.location.search);
     const eventId = params.get("eventId");
+    console.log("Extracted eventId:", eventId);
     if (eventId) {
-      // If eventId exists, update the link's href.
+      // If eventId is present, set the link to the event details page.
       document.getElementById("viewEventLink").href = "event.html?id=" + eventId;
+      document.getElementById("viewEventLink").textContent = "View Your Event";
     } else {
-      // If not, show an error message.
-      document.getElementById("viewEventLink").textContent = "No event ID found.";
+      // If eventId is missing, notify the user.
+      document.getElementById("viewEventLink").textContent = "Event ID not found";
       document.getElementById("viewEventLink").href = "#";
     }
   </script>
