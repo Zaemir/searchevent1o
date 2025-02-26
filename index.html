@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <title>Event Search Prototype</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <!-- Firebase SDK -->
+
+  <!-- Firebase SDK (Place this in the head) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script>
-    // Firebase configuration
+    // Firebase configuration (also in the head)
     const firebaseConfig = {
       apiKey: "AIzaSyCmFpsG231lCdIJtHeN6mH-Bxd-LHzrgZg",
       authDomain: "eventsearchprototype.firebaseapp.com",
@@ -22,8 +22,8 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
   </script>
-  
-  <!-- CSS Styles -->
+
+  <!-- CSS Styles (Place this in the head as well) -->
   <style>
     /* Base styles */
     body {
@@ -179,19 +179,19 @@
     }
   </style>
   
-  <!-- Main Script: Fetch and Render Events -->
+  <!-- Main Script: Fetch and Render Events (Place this below CSS in the head) -->
   <script>
     let currentFilter = 'all';
     let currentQuery = "";
     let currentCountry = "";
     let currentCity = "";
-    let userLocation = null; // Stores user's latitude and longitude if available
-    
-    // Helper to normalize strings for consistent matching
+    let userLocation = null; // Stores user coordinates
+
+    // Normalize string helper for consistent matching
     function normalizeString(str) {
       return str ? str.toLowerCase().trim() : "";
     }
-    
+
     // Static mapping for Pakistan provinces and major cities
     const pakistanData = {
       "Punjab": ["Lahore", "Faisalabad", "Rawalpindi", "Gujranwala", "Sialkot"],
@@ -199,7 +199,7 @@
       "Khyber Pakhtunkhwa": ["Peshawar", "Abbottabad", "Mardan"],
       "Balochistan": ["Quetta", "Gwadar"]
     };
-    
+
     // Populate city dropdown based on selected province
     function updateCityDropdown(province) {
       const citySelect = document.getElementById("cityFilter");
@@ -213,8 +213,8 @@
         });
       }
     }
-    
-    // Load events from Firestore and apply filters sequentially
+
+    // Load events from Firestore and apply filters
     async function loadEvents() {
       try {
         const snapshot = await db.collection("events").get();
@@ -225,30 +225,32 @@
           data.type = data.type || "event";
           events.push(data);
         });
-        
-        // Apply Province filter if selected
+        // Filter sequentially:
+        // 1. Filter by province (if selected)
         if (currentCountry) {
-          events = events.filter(item => normalizeString(item.location).includes(normalizeString(currentCountry)));
+          events = events.filter(item =>
+            normalizeString(item.location).includes(normalizeString(currentCountry))
+          );
         }
-        
-        // Apply City filter if selected
+        // 2. Filter by city (if selected)
         if (currentCity) {
-          events = events.filter(item => normalizeString(item.location).includes(normalizeString(currentCity)));
+          events = events.filter(item =>
+            normalizeString(item.location).includes(normalizeString(currentCity))
+          );
         }
-        
-        // Apply search query filter if provided
+        // 3. Filter by search query across title, description, and location
         if (currentQuery) {
           events = events.filter(item =>
             normalizeString(item.title).includes(normalizeString(currentQuery)) ||
-            normalizeString(item.description).includes(normalizeString(currentQuery))
+            normalizeString(item.description).includes(normalizeString(currentQuery)) ||
+            normalizeString(item.location).includes(normalizeString(currentQuery))
           );
         }
-        
-        // If no events match and userLocation is available, sort all events by distance
+        // If no events after filtering and user location is available, sort by distance
         if (events.length === 0 && userLocation) {
-          const allEventsSnapshot = await db.collection("events").get();
+          const allSnapshot = await db.collection("events").get();
           let allEvents = [];
-          allEventsSnapshot.forEach(doc => {
+          allSnapshot.forEach(doc => {
             const data = doc.data();
             data.id = doc.id;
             data.type = data.type || "event";
@@ -260,26 +262,25 @@
             return distA - distB;
           });
         }
-        
         renderItems(events);
         renderRecommendations(events);
       } catch (error) {
         console.error("Error fetching events:", error);
       }
     }
-    
-    // Haversine formula to compute distance (km)
+
+    // Haversine formula to compute distance (in km)
     function computeDistance(lat1, lon1, lat2, lon2) {
       const R = 6371;
       const dLat = (lat2 - lat1) * Math.PI / 180;
       const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+      const a = Math.sin(dLat/2) ** 2 +
                 Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLon/2) * Math.sin(dLon/2);
+                Math.sin(dLon/2) ** 2;
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
       return R * c;
     }
-    
+
     function renderItems(events) {
       const eventList = document.getElementById("eventList");
       eventList.innerHTML = "";
@@ -304,8 +305,7 @@
         eventList.appendChild(card);
       });
     }
-    
-    // Render recommendations: show up to 3 events from the filtered list
+
     function renderRecommendations(events) {
       const recContainer = document.getElementById("recommendationList");
       if (!recContainer) return;
@@ -331,7 +331,7 @@
         recContainer.appendChild(card);
       });
     }
-    
+
     function filterType(type) {
       currentFilter = type;
       document.getElementById("btnAll").classList.remove("active");
@@ -342,8 +342,8 @@
       if (type === "place") document.getElementById("btnPlaces").classList.add("active");
       loadEvents();
     }
-    
-    // Helper functions for date formatting (unchanged)
+
+    // Date formatting helpers
     function getOrdinal(day) {
       if (day > 3 && day < 21) return day + "th";
       switch (day % 10) {
@@ -353,7 +353,6 @@
         default: return day + "th";
       }
     }
-    
     function formatDateTime(dateStr, timeStr) {
       const [year, month, day] = dateStr.split("-").map(Number);
       const [hour, minute] = timeStr.split(":").map(Number);
@@ -366,9 +365,9 @@
       hourFormatted = hourFormatted % 12 || 12;
       return `${dayFormatted} ${monthFormatted} ${dateObj.getFullYear()} at ${hourFormatted}:${("0" + dateObj.getMinutes()).slice(-2)} ${ampm}`;
     }
-    
+
     document.addEventListener("DOMContentLoaded", () => {
-      // Search input listener
+      // Search input listener (search across title, description, location)
       document.getElementById("searchInput").addEventListener("input", function(e) {
         currentQuery = e.target.value.toLowerCase();
         loadEvents();
@@ -394,7 +393,6 @@
         .then(response => response.json())
         .then(data => {
           if (data.country_code === "PK") {
-            // Set province from IP data (if available), default to Punjab
             const province = data.region || "Punjab";
             document.getElementById("countryFilter").value = province;
             currentCountry = province;
@@ -403,7 +401,6 @@
               document.getElementById("cityFilter").value = data.city;
               currentCity = data.city;
             }
-            // Store user coordinates if available
             if (data.latitude && data.longitude) {
               userLocation = { lat: parseFloat(data.latitude), lng: parseFloat(data.longitude) };
             }
