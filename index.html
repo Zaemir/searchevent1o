@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Event Search Prototype</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -22,7 +22,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
   </script>
-  
+
   <!-- CSS Styles -->
   <style>
     /* Base styles */
@@ -164,12 +164,34 @@
     }
   </style>
   
-  <!-- Main Script: Fetch and Render Events from Firestore -->
+  <!-- Main Script: Fetch and Render Events -->
   <script>
     let currentFilter = 'all';
     let currentQuery = "";
     let currentCountry = "";
     let currentCity = "";
+    
+    // For Pakistan, a sample mapping of provinces to major cities
+    const pakistanData = {
+      "Punjab": ["Lahore", "Rawalpindi", "Faisalabad"],
+      "Sindh": ["Karachi", "Hyderabad"],
+      "Khyber Pakhtunkhwa": ["Peshawar", "Abbottabad"],
+      "Balochistan": ["Quetta"]
+    };
+    
+    // Populate city dropdown based on selected province
+    function updateCityDropdown(province) {
+      const citySelect = document.getElementById("cityFilter");
+      citySelect.innerHTML = `<option value="">Select City</option>`;
+      if (pakistanData[province]) {
+        pakistanData[province].forEach(city => {
+          const opt = document.createElement("option");
+          opt.value = city;
+          opt.textContent = city;
+          citySelect.appendChild(opt);
+        });
+      }
+    }
     
     async function loadEvents() {
       try {
@@ -196,7 +218,7 @@
                              item.description.toLowerCase().includes(currentQuery);
         // Check type filter
         const matchesType = currentFilter === "all" ? true : item.type === currentFilter;
-        // Check location filters: simple check if event.location contains the country and city
+        // Check location filters: event location should include selected country and city if set
         const matchesCountry = currentCountry ? item.location.toLowerCase().includes(currentCountry.toLowerCase()) : true;
         const matchesCity = currentCity ? item.location.toLowerCase().includes(currentCity.toLowerCase()) : true;
         return matchesQuery && matchesType && matchesCountry && matchesCity;
@@ -211,7 +233,7 @@
         const card = document.createElement("div");
         card.className = "event-card";
         card.onclick = () => { window.location.href = "event.html?id=" + item.id; };
-        // Use dummyimage.com for images; if missing, fallback to a default image URL.
+        // Use dummyimage.com for images
         const imageUrl = item.imageUrls && item.imageUrls.length > 0 
           ? item.imageUrls[0].replace("via.placeholder.com", "dummyimage.com")
           : "https://dummyimage.com/300x150/cccccc/000000?text=No+Image";
@@ -243,24 +265,32 @@
         currentQuery = e.target.value.toLowerCase();
         loadEvents();
       });
-      // Country filter listener
+      
+      // Province (Country) filter for Pakistan (we limit to Pakistan)
       document.getElementById("countryFilter").addEventListener("change", function(e) {
         currentCountry = e.target.value;
+        // When province is selected, update the city dropdown
+        updateCityDropdown(currentCountry);
+        // Reset city selection
+        currentCity = "";
+        document.getElementById("cityFilter").value = "";
         loadEvents();
       });
+      
       // City filter listener
       document.getElementById("cityFilter").addEventListener("change", function(e) {
         currentCity = e.target.value;
         loadEvents();
       });
       
-      // Auto-detect location using a CORS-friendly geolocation API (geolocation-db.com)
+      // Auto-detect location using a CORS-friendly API (geolocation-db.com)
       fetch("https://geolocation-db.com/json/")
         .then(response => response.json())
         .then(data => {
-          if (data.country_name) {
-            document.getElementById("countryFilter").value = data.country_name;
-            currentCountry = data.country_name;
+          if (data.country_name && data.country_name.toLowerCase() === "pakistan") {
+            document.getElementById("countryFilter").value = "Pakistan";
+            currentCountry = "Pakistan";
+            updateCityDropdown("Pakistan");
           }
           if (data.city) {
             document.getElementById("cityFilter").value = data.city;
@@ -291,25 +321,25 @@
       <input type="text" id="searchInput" placeholder="Search events and places...">
       <div class="location-filters">
         <select id="countryFilter">
-          <option value="">Select Country</option>
-          <option value="United States">United States</option>
-          <option value="United Kingdom">United Kingdom</option>
-          <option value="Canada">Canada</option>
-          <option value="India">India</option>
-          <option value="Pakistan">Pakistan</option>
-          <!-- Add more countries as needed -->
+          <option value="">Select Province</option>
+          <option value="Punjab">Punjab</option>
+          <option value="Sindh">Sindh</option>
+          <option value="Khyber Pakhtunkhwa">Khyber Pakhtunkhwa</option>
+          <option value="Balochistan">Balochistan</option>
         </select>
         <select id="cityFilter">
           <option value="">Select City</option>
-          <!-- Users can select or type their city if needed -->
+          <!-- Cities will be populated dynamically based on province selection -->
         </select>
       </div>
     </div>
+    
     <div class="filters">
       <button id="btnAll" class="active" onclick="filterType('all')">All</button>
       <button id="btnEvents" onclick="filterType('event')">Events</button>
       <button id="btnPlaces" onclick="filterType('place')">Places</button>
     </div>
+    
     <div class="event-list" id="eventList">
       <!-- Event cards will be dynamically injected here -->
     </div>
