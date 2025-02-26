@@ -185,14 +185,14 @@
     let currentQuery = "";
     let currentCountry = "";
     let currentCity = "";
-    let userLocation = null; // To store user latitude and longitude
-
-    // Helper to normalize strings
+    let userLocation = null; // Stores user's latitude and longitude if available
+    
+    // Helper to normalize strings for consistent matching
     function normalizeString(str) {
       return str ? str.toLowerCase().trim() : "";
     }
     
-    // Mapping for Pakistan provinces and major cities (Sialkot included)
+    // Static mapping for Pakistan provinces and major cities
     const pakistanData = {
       "Punjab": ["Lahore", "Faisalabad", "Rawalpindi", "Gujranwala", "Sialkot"],
       "Sindh": ["Karachi", "Hyderabad", "Sukkur"],
@@ -214,23 +214,11 @@
       }
     }
     
-    // Haversine formula to compute distance (in km)
-    function computeDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371; // Radius of the Earth in km
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = 
-        Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLon/2) * Math.sin(dLon/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      return R * c;
-    }
-    
+    // Load events from Firestore and apply filters sequentially
     async function loadEvents() {
       try {
         const snapshot = await db.collection("events").get();
-        const events = [];
+        let events = [];
         snapshot.forEach(doc => {
           const data = doc.data();
           data.id = doc.id;
@@ -238,46 +226,58 @@
           events.push(data);
         });
         
-        let filteredItems = [];
+        // Apply Province filter if selected
+        if (currentCountry) {
+          events = events.filter(item => normalizeString(item.location).includes(normalizeString(currentCountry)));
+        }
+        
+        // Apply City filter if selected
+        if (currentCity) {
+          events = events.filter(item => normalizeString(item.location).includes(normalizeString(currentCity)));
+        }
+        
+        // Apply search query filter if provided
         if (currentQuery) {
-          // Filter by search query and sort by city match if selected
-          filteredItems = events.filter(item =>
+          events = events.filter(item =>
             normalizeString(item.title).includes(normalizeString(currentQuery)) ||
             normalizeString(item.description).includes(normalizeString(currentQuery))
           );
-          if (currentCity) {
-            filteredItems.sort((a, b) => {
-              const aMatch = normalizeString(a.location).includes(normalizeString(currentCity)) ? 0 : 1;
-              const bMatch = normalizeString(b.location).includes(normalizeString(currentCity)) ? 0 : 1;
-              return aMatch - bMatch;
-            });
-          }
-        } else {
-          // Without search query, filter by selected province/city
-          filteredItems = events.filter(item => {
-            let matches = true;
-            if (currentCountry) {
-              matches = matches && normalizeString(item.location).includes(normalizeString(currentCountry));
-            }
-            if (currentCity) {
-              matches = matches && normalizeString(item.location).includes(normalizeString(currentCity));
-            }
-            return matches;
-          });
-          // If filtering yields no events, use all events
-          if (filteredItems.length === 0 && userLocation) {
-            filteredItems = events.sort((a, b) => {
-              const distA = a.lat && a.lng ? computeDistance(userLocation.lat, userLocation.lng, a.lat, a.lng) : Infinity;
-              const distB = b.lat && b.lng ? computeDistance(userLocation.lat, userLocation.lng, b.lat, b.lng) : Infinity;
-              return distA - distB;
-            });
-          }
         }
-        renderItems(filteredItems);
-        renderRecommendations(filteredItems);
+        
+        // If no events match and userLocation is available, sort all events by distance
+        if (events.length === 0 && userLocation) {
+          const allEventsSnapshot = await db.collection("events").get();
+          let allEvents = [];
+          allEventsSnapshot.forEach(doc => {
+            const data = doc.data();
+            data.id = doc.id;
+            data.type = data.type || "event";
+            allEvents.push(data);
+          });
+          events = allEvents.sort((a, b) => {
+            const distA = a.lat && a.lng ? computeDistance(userLocation.lat, userLocation.lng, a.lat, a.lng) : Infinity;
+            const distB = b.lat && b.lng ? computeDistance(userLocation.lat, userLocation.lng, b.lat, b.lng) : Infinity;
+            return distA - distB;
+          });
+        }
+        
+        renderItems(events);
+        renderRecommendations(events);
       } catch (error) {
         console.error("Error fetching events:", error);
       }
+    }
+    
+    // Haversine formula to compute distance (km)
+    function computeDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
     }
     
     function renderItems(events) {
@@ -305,6 +305,7 @@
       });
     }
     
+    // Render recommendations: show up to 3 events from the filtered list
     function renderRecommendations(events) {
       const recContainer = document.getElementById("recommendationList");
       if (!recContainer) return;
@@ -342,7 +343,7 @@
       loadEvents();
     }
     
-    // Helper functions for date formatting
+    // Helper functions for date formatting (unchanged)
     function getOrdinal(day) {
       if (day > 3 && day < 21) return day + "th";
       switch (day % 10) {
@@ -393,7 +394,7 @@
         .then(response => response.json())
         .then(data => {
           if (data.country_code === "PK") {
-            // Set province from IP data, default to Punjab if not provided
+            // Set province from IP data (if available), default to Punjab
             const province = data.region || "Punjab";
             document.getElementById("countryFilter").value = province;
             currentCountry = province;
@@ -402,7 +403,7 @@
               document.getElementById("cityFilter").value = data.city;
               currentCity = data.city;
             }
-            // Also store user location coordinates if available
+            // Store user coordinates if available
             if (data.latitude && data.longitude) {
               userLocation = { lat: parseFloat(data.latitude), lng: parseFloat(data.longitude) };
             }
