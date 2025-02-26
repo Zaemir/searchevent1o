@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Event Search Prototype</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+  
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -22,7 +22,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
   </script>
-
+  
   <!-- CSS Styles -->
   <style>
     /* Base styles */
@@ -181,13 +181,19 @@
     let currentCountry = "";
     let currentCity = "";
     
-    // Static mapping for Pakistan provinces and major cities (including Sialkot)
+    // Mapping for Pakistan provinces and their major cities
     const pakistanData = {
       "Punjab": ["Lahore", "Faisalabad", "Rawalpindi", "Gujranwala", "Sialkot"],
       "Sindh": ["Karachi", "Hyderabad", "Sukkur"],
       "Khyber Pakhtunkhwa": ["Peshawar", "Abbottabad", "Mardan"],
       "Balochistan": ["Quetta", "Gwadar"]
     };
+    
+    // Normalize city names (fix common misspellings)
+    function normalizeCityName(name) {
+      if (!name) return "";
+      return name.toLowerCase().replace("lahour", "lahore").trim();
+    }
     
     // Update city dropdown based on selected province
     function updateCityDropdown(province) {
@@ -215,31 +221,28 @@
         });
         let filteredItems = [];
         if (currentQuery) {
-          // Filter by search query (and sort by matching city if selected)
           filteredItems = events.filter(item =>
             item.title.toLowerCase().includes(currentQuery) ||
             item.description.toLowerCase().includes(currentQuery)
           );
           if (currentCity) {
             filteredItems.sort((a, b) => {
-              const aMatch = a.location.toLowerCase().includes(currentCity.toLowerCase()) ? 0 : 1;
-              const bMatch = b.location.toLowerCase().includes(currentCity.toLowerCase()) ? 0 : 1;
+              const aMatch = normalizeCityName(a.location).includes(normalizeCityName(currentCity)) ? 0 : 1;
+              const bMatch = normalizeCityName(b.location).includes(normalizeCityName(currentCity)) ? 0 : 1;
               return aMatch - bMatch;
             });
           }
         } else {
-          // If no search query, filter by location if set
           filteredItems = events.filter(item => {
             let matches = true;
             if (currentCountry) {
               matches = matches && item.location.toLowerCase().includes(currentCountry.toLowerCase());
             }
             if (currentCity) {
-              matches = matches && item.location.toLowerCase().includes(currentCity.toLowerCase());
+              matches = matches && normalizeCityName(item.location).includes(normalizeCityName(currentCity));
             }
             return matches;
           });
-          // Fallback: if no events match location, show all events
           if (filteredItems.length === 0) {
             filteredItems = events;
           }
@@ -276,10 +279,9 @@
       });
     }
     
-    // Render a recommendations section (up to 3 events)
     function renderRecommendations(events) {
       const recContainer = document.getElementById("recommendationList");
-      if (!recContainer) return; // Skip if recommendation container not present
+      if (!recContainer) return;
       recContainer.innerHTML = "";
       if (events.length === 0) {
         recContainer.innerHTML = "<p>No recommendations available.</p>";
@@ -329,109 +331,13 @@
       const [year, month, day] = dateStr.split("-").map(Number);
       const [hour, minute] = timeStr.split(":").map(Number);
       const dateObj = new Date(year, month - 1, day, hour, minute);
-      
       const dayFormatted = getOrdinal(dateObj.getDate());
       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       const monthFormatted = monthNames[dateObj.getMonth()];
-      
       let hourFormatted = dateObj.getHours();
       const ampm = hourFormatted >= 12 ? "PM" : "AM";
       hourFormatted = hourFormatted % 12 || 12;
-      
       return `${dayFormatted} ${monthFormatted} ${dateObj.getFullYear()} at ${hourFormatted}:${("0" + dateObj.getMinutes()).slice(-2)} ${ampm}`;
     }
     
-    document.addEventListener("DOMContentLoaded", () => {
-      // Search input listener
-      document.getElementById("searchInput").addEventListener("input", function(e) {
-        currentQuery = e.target.value.toLowerCase();
-        loadEvents();
-      });
-      
-      // Province filter listener
-      document.getElementById("countryFilter").addEventListener("change", function(e) {
-        currentCountry = e.target.value;
-        updateCityDropdown(currentCountry);
-        currentCity = "";
-        document.getElementById("cityFilter").value = "";
-        loadEvents();
-      });
-      
-      // City filter listener
-      document.getElementById("cityFilter").addEventListener("change", function(e) {
-        currentCity = e.target.value;
-        loadEvents();
-      });
-      
-      // Auto-detect location using a CORS-friendly API (ipwhois.app)
-      fetch("https://ipwhois.app/json/")
-        .then(response => response.json())
-        .then(data => {
-          if (data.country_code === "PK") {
-            // Use region if available; if not, default to Punjab
-            const province = data.region || "Punjab";
-            document.getElementById("countryFilter").value = province;
-            currentCountry = province;
-            updateCityDropdown(province);
-            if (data.city) {
-              document.getElementById("cityFilter").value = data.city;
-              currentCity = data.city;
-            }
-          }
-          loadEvents();
-        })
-        .catch(error => console.error("Error fetching IP location:", error));
-      
-      // Initial load of events
-      loadEvents();
-    });
-  </script>
-</head>
-<body>
-  <header>
-    <div class="logo"><a href="index.html"><h2>EventSearch</h2></a></div>
-    <nav>
-      <a href="auth.html">Sign In</a>
-      <a href="create-event.html">Create Event</a>
-      <a href="contact.html">Contact</a>
-    </nav>
-    <div class="profile" title="Profile"></div>
-  </header>
-  
-  <div class="container">
-    <div class="search-bar">
-      <input type="text" id="searchInput" placeholder="Search events and places...">
-      <div class="location-filters">
-        <select id="countryFilter">
-          <option value="">Select Province</option>
-          <option value="Punjab">Punjab</option>
-          <option value="Sindh">Sindh</option>
-          <option value="Khyber Pakhtunkhwa">Khyber Pakhtunkhwa</option>
-          <option value="Balochistan">Balochistan</option>
-        </select>
-        <select id="cityFilter">
-          <option value="">Select City</option>
-          <!-- Cities will be populated dynamically -->
-        </select>
-      </div>
-    </div>
-    
-    <div class="filters">
-      <button id="btnAll" class="active" onclick="filterType('all')">All</button>
-      <button id="btnEvents" onclick="filterType('event')">Events</button>
-      <button id="btnPlaces" onclick="filterType('place')">Places</button>
-    </div>
-    
-    <div class="event-list" id="eventList">
-      <!-- Event cards will be dynamically injected here -->
-    </div>
-    
-    <div class="recommendations" id="recommendations">
-      <h2>Recommended Events</h2>
-      <div class="event-list" id="recommendationList">
-        <!-- Recommended events will be injected here -->
-      </div>
-    </div>
-  </div>
-</body>
-</html>
+    docum
