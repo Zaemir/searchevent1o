@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <title>Event Search Prototype</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script>
-    // Firebase configuration
+    // Firebase configuration (unchanged)
     const firebaseConfig = {
       apiKey: "AIzaSyCmFpsG231lCdIJtHeN6mH-Bxd-LHzrgZg",
       authDomain: "eventsearchprototype.firebaseapp.com",
@@ -22,7 +22,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
   </script>
-  
+
   <!-- CSS Styles -->
   <style>
     /* Base styles */
@@ -124,8 +124,15 @@
     /* Event Cards Grid */
     .event-list {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 20px;
+      /* Default for laptop: 4 cards per row */
+      grid-template-columns: repeat(4, 1fr);
+    }
+    @media (max-width: 600px) {
+      /* On mobile: 2 cards per row */
+      .event-list {
+        grid-template-columns: repeat(2, 1fr);
+      }
     }
     .event-card {
       background: #fff;
@@ -181,7 +188,12 @@
     let currentCountry = "";
     let currentCity = "";
     
-    // Mapping for Pakistan provinces and their major cities
+    // Helper function to normalize strings for comparison
+    function normalizeString(str) {
+      return str ? str.toLowerCase().trim() : "";
+    }
+    
+    // Mapping for Pakistan provinces and major cities (Sialkot included in Punjab)
     const pakistanData = {
       "Punjab": ["Lahore", "Faisalabad", "Rawalpindi", "Gujranwala", "Sialkot"],
       "Sindh": ["Karachi", "Hyderabad", "Sukkur"],
@@ -189,13 +201,7 @@
       "Balochistan": ["Quetta", "Gwadar"]
     };
     
-    // Normalize city names (fix common misspellings)
-    function normalizeCityName(name) {
-      if (!name) return "";
-      return name.toLowerCase().replace("lahour", "lahore").trim();
-    }
-    
-    // Update city dropdown based on selected province
+    // Populate city dropdown based on selected province
     function updateCityDropdown(province) {
       const citySelect = document.getElementById("cityFilter");
       citySelect.innerHTML = `<option value="">Select City</option>`;
@@ -219,30 +225,34 @@
           data.type = data.type || "event";
           events.push(data);
         });
+        
         let filteredItems = [];
         if (currentQuery) {
+          // If a search query is present, filter by text then sort by city match if selected.
           filteredItems = events.filter(item =>
-            item.title.toLowerCase().includes(currentQuery) ||
-            item.description.toLowerCase().includes(currentQuery)
+            normalizeString(item.title).includes(normalizeString(currentQuery)) ||
+            normalizeString(item.description).includes(normalizeString(currentQuery))
           );
           if (currentCity) {
             filteredItems.sort((a, b) => {
-              const aMatch = normalizeCityName(a.location).includes(normalizeCityName(currentCity)) ? 0 : 1;
-              const bMatch = normalizeCityName(b.location).includes(normalizeCityName(currentCity)) ? 0 : 1;
+              const aMatch = normalizeString(a.location).includes(normalizeString(currentCity)) ? 0 : 1;
+              const bMatch = normalizeString(b.location).includes(normalizeString(currentCity)) ? 0 : 1;
               return aMatch - bMatch;
             });
           }
         } else {
+          // Without a search query, filter by location if set.
           filteredItems = events.filter(item => {
             let matches = true;
             if (currentCountry) {
-              matches = matches && item.location.toLowerCase().includes(currentCountry.toLowerCase());
+              matches = matches && normalizeString(item.location).includes(normalizeString(currentCountry));
             }
             if (currentCity) {
-              matches = matches && normalizeCityName(item.location).includes(normalizeCityName(currentCity));
+              matches = matches && normalizeString(item.location).includes(normalizeString(currentCity));
             }
             return matches;
           });
+          // Fallback: if no events match location filters, show all events.
           if (filteredItems.length === 0) {
             filteredItems = events;
           }
@@ -279,6 +289,7 @@
       });
     }
     
+    // Render recommendations: show up to 3 events from the filtered list
     function renderRecommendations(events) {
       const recContainer = document.getElementById("recommendationList");
       if (!recContainer) return;
@@ -362,12 +373,11 @@
         loadEvents();
       });
       
-      // Auto-detect location using a CORS-friendly API (ipwhois.app)
+      // Auto-detect location using ipwhois.app (CORS-friendly)
       fetch("https://ipwhois.app/json/")
         .then(response => response.json())
         .then(data => {
           if (data.country_code === "PK") {
-            // Use region if available; if not, default to Punjab
             const province = data.region || "Punjab";
             document.getElementById("countryFilter").value = province;
             currentCountry = province;
