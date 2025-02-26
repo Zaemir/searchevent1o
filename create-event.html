@@ -9,7 +9,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script>
-    // Firebase configuration – must be loaded first so that Firestore is available.
+    // Firebase configuration – must be loaded first
     const firebaseConfig = {
       apiKey: "AIzaSyCmFpsG231lCdIJtHeN6mH-Bxd-LHzrgZg",
       authDomain: "eventsearchprototype.firebaseapp.com",
@@ -67,13 +67,13 @@
     });
   </script>
   
-  <!-- Google Maps API: async, defer with callback -->
+  <!-- Google Maps API: async defer with callback -->
   <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0&callback=initMap"></script>
   
   <!-- Map and Geocoding Script -->
   <script>
     let map, marker;
-    // Global initMap function for Google Maps API callback
+    // Global initMap function for API callback
     window.initMap = function() {
       const mapDiv = document.getElementById("map");
       if (!mapDiv) {
@@ -84,13 +84,12 @@
         center: { lat: 31.5204, lng: 74.3587 }, // Default center (Lahore)
         zoom: 12
       });
-      // Allow setting marker on map click
       map.addListener("click", function(e) {
         placeMarker(e.latLng);
       });
     };
-    
-    // Place or update marker and update hidden lat/lng fields
+
+    // Place or update marker and update hidden latitude/longitude fields
     function placeMarker(location) {
       if (marker) {
         marker.setPosition(location);
@@ -103,8 +102,8 @@
       document.getElementById("lat").value = location.lat();
       document.getElementById("lng").value = location.lng();
     }
-    
-    // Geocode manual address and update map
+
+    // Geocode manual address input when the field loses focus
     function geocodeAddress() {
       const address = document.getElementById("manualLocation").value;
       if (!address) return;
@@ -123,11 +122,22 @@
         }
       });
     }
+    
+    // Prevent form submission on Enter key in manual location field
+    document.addEventListener("DOMContentLoaded", () => {
+      const manualInput = document.getElementById("manualLocation");
+      manualInput.addEventListener("keydown", function(e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          geocodeAddress();
+        }
+      });
+    });
   </script>
   
   <!-- Script for Province/City Dropdowns and Form Submission -->
   <script>
-    // Mapping for Pakistan provinces and cities
+    // Mapping for provinces and major cities
     const provinceToCities = {
       "Punjab": ["Lahore", "Faisalabad", "Rawalpindi", "Gujranwala", "Sialkot"],
       "Sindh": ["Karachi", "Hyderabad", "Sukkur"],
@@ -150,16 +160,16 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-      // Province dropdown listener
+      // Province dropdown listener to populate cities
       document.getElementById("provinceSelect").addEventListener("change", function(e) {
         populateCitySelect(e.target.value);
       });
       
-      // Form submission handling with redirection including event ID
+      // Handle form submission
       document.getElementById("createEventForm").addEventListener("submit", async function(e) {
         e.preventDefault();
         
-        // Collect form values (all required)
+        // Collect form values
         const title = document.getElementById("eventTitle").value;
         const description = document.getElementById("eventDescription").value;
         const province = document.getElementById("provinceSelect").value;
@@ -169,7 +179,7 @@
         const lat = document.getElementById("lat").value;
         const lng = document.getElementById("lng").value;
         
-        // Process images (reverse order so last selected is first)
+        // Process images: reverse order so last selected is first; simulate image URLs
         const imageUrls = [];
         const files = document.getElementById("eventImages").files;
         const fileArray = Array.from(files).reverse();
@@ -184,7 +194,7 @@
             location: fullLocation,
             province: province,
             city: city,
-            date: "", // Date and time can be added here if needed
+            date: "",  // Add date/time if needed
             time: "",
             imageUrls: imageUrls,
             lat: lat,
@@ -192,6 +202,7 @@
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
           alert("Event submitted successfully!");
+          // Redirect to event-submitted page with event ID
           window.location.href = "event-submitted.html?eventId=" + docRef.id;
         } catch (error) {
           console.error("Error adding event:", error);
@@ -239,7 +250,7 @@
       <label for="citySelect">Select City:</label>
       <select id="citySelect" name="citySelect" required>
         <option value="">Select City</option>
-        <!-- Dynamically populated -->
+        <!-- Cities will be populated dynamically -->
       </select>
       
       <!-- 5. Date & Time Section -->
@@ -248,7 +259,7 @@
       <label for="eventTime">Time:</label>
       <input type="time" id="eventTime" name="eventTime" required>
       
-      <!-- 6. Manual Location Input & Map Integration -->
+      <!-- 6. Manual Location Input & Integrated Map -->
       <label for="manualLocation">Enter Location (address):</label>
       <input type="text" id="manualLocation" name="manualLocation" placeholder="e.g., Street, Area" onblur="geocodeAddress()" required>
       <label>Pick Location on Map:</label>
@@ -257,7 +268,7 @@
       <input type="hidden" id="lat" name="lat" required>
       <input type="hidden" id="lng" name="lng" required>
       
-      <!-- 7. Submit Button with extra spacing -->
+      <!-- 7. Submit Button with spacing -->
       <div style="margin-top:20px;">
         <button type="submit">Submit Event</button>
       </div>
