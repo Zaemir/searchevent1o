@@ -5,18 +5,18 @@
   <title>Event Details</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <!-- CSS Styles -->
+  <!-- CSS Styles for a modern, responsive UI -->
   <style>
     /* Base Styles */
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: #f4f4f4;
       margin: 0;
       padding: 20px;
     }
     header {
       background: #fff;
-      padding: 15px;
+      padding: 15px 20px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       margin-bottom: 20px;
     }
@@ -24,13 +24,15 @@
       margin: 0 10px;
       text-decoration: none;
       color: #333;
+      font-weight: 500;
     }
     .container {
       max-width: 800px;
-      margin: 0 auto;
       background: #fff;
+      margin: 0 auto;
       padding: 20px;
-      border-radius: 5px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     /* Event Images Carousel */
     .event-images {
@@ -38,48 +40,56 @@
       gap: 10px;
       overflow-x: auto;
       margin-bottom: 20px;
+      padding-bottom: 10px;
     }
     .event-images img {
-      height: 200px;
-      border-radius: 5px;
+      height: 220px;
+      border-radius: 8px;
       object-fit: cover;
     }
     /* Event Title */
     #eventTitle {
       font-size: 2em;
-      margin-bottom: 10px;
-      color: #333;
+      margin: 10px 0;
+      color: #222;
     }
-    /* Event Details Sections */
+    /* Event Details */
     .event-details {
       margin-bottom: 20px;
     }
     .event-details p {
-      font-size: 1em;
-      color: #555;
-      margin: 5px 0;
-      line-height: 1.5;
+      font-size: 1.1em;
+      color: #444;
+      margin: 6px 0;
+      line-height: 1.6;
     }
     /* Map Container */
     #map {
       width: 100%;
       height: 300px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
       margin-top: 20px;
     }
+    /* Responsive Adjustments */
     @media (max-width: 600px) {
-      #eventTitle { font-size: 1.5em; }
-      .event-details p { font-size: 0.9em; }
-      .event-images img { height: 150px; }
+      #eventTitle {
+        font-size: 1.5em;
+      }
+      .event-details p {
+        font-size: 0.95em;
+      }
+      .event-images img {
+        height: 180px;
+      }
     }
   </style>
   
-  <!-- Firebase SDK (placed in head) -->
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script>
-    // Firebase configuration – needed to access Firestore
+    // Firebase configuration (required for Firestore access)
     const firebaseConfig = {
       apiKey: "AIzaSyCmFpsG231lCdIJtHeN6mH-Bxd-LHzrgZg",
       authDomain: "eventsearchprototype.firebaseapp.com",
@@ -93,14 +103,14 @@
     const db = firebase.firestore();
   </script>
   
-  <!-- Google Maps API: async defer with callback -->
+  <!-- Google Maps API with async, defer, and callback -->
   <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0&callback=initMap"></script>
   
-  <!-- Map and Event Data Script -->
+  <!-- Map & Event Data Script -->
   <script>
     let map, marker;
     
-    // Global initMap function invoked by Google Maps API callback
+    // Global function invoked by Google Maps API
     window.initMap = function() {
       const mapDiv = document.getElementById("map");
       if (!mapDiv) {
@@ -114,7 +124,7 @@
       });
     };
 
-    // Place a marker on the map and update hidden fields if needed
+    // Function to place/update marker on map
     function placeMarker(location) {
       if (marker) {
         marker.setPosition(location);
@@ -128,14 +138,12 @@
 
     // Fetch event data from Firestore and populate the page
     document.addEventListener("DOMContentLoaded", async () => {
-      // Extract event ID from URL query parameters
       const params = new URLSearchParams(window.location.search);
       const eventId = params.get("id");
       if (!eventId) {
         document.querySelector(".container").innerHTML = "<p>No event ID provided.</p>";
         return;
       }
-      
       try {
         const doc = await db.collection("events").doc(eventId).get();
         if (!doc.exists) {
@@ -144,36 +152,35 @@
         }
         const eventData = doc.data();
         
+        // Update event images carousel
+        const imagesContainer = document.getElementById("imagesContainer");
+        imagesContainer.innerHTML = "";
+        if (eventData.imageUrls && eventData.imageUrls.length > 0) {
+          eventData.imageUrls.forEach(url => {
+            const img = document.createElement("img");
+            img.src = url;
+            img.alt = eventData.title;
+            imagesContainer.appendChild(img);
+          });
+        }
+        
         // Update event title
         document.getElementById("eventTitle").textContent = eventData.title || "Untitled Event";
         
-        // Display event images
-        const imagesContainer = document.querySelector(".event-images");
-        if (imagesContainer) {
-          imagesContainer.innerHTML = "";
-          if (eventData.imageUrls && eventData.imageUrls.length > 0) {
-            eventData.imageUrls.forEach(url => {
-              const img = document.createElement("img");
-              img.src = url; // Assume URL is valid
-              img.alt = eventData.title;
-              imagesContainer.appendChild(img);
-            });
-          }
-        }
-        
-        // Display date & time
-        const dateTimeElem = document.getElementById("eventDateTime");
-        if (eventData.date && eventData.time) {
-          dateTimeElem.textContent = `${eventData.date} at ${eventData.time}`;
-        } else {
-          dateTimeElem.textContent = "Date/Time not provided";
-        }
-        
-        // Display location and description
+        // Update event location text (province and city)
         document.getElementById("eventLocation").textContent = eventData.location || "Location not provided";
+        
+        // Update date & time
+        if (eventData.date && eventData.time) {
+          document.getElementById("eventDateTime").textContent = `${eventData.date} at ${eventData.time}`;
+        } else {
+          document.getElementById("eventDateTime").textContent = "Date/Time not provided";
+        }
+        
+        // Update event description
         document.getElementById("eventDescription").textContent = eventData.description || "No description available.";
         
-        // If coordinates are provided, update the map
+        // Update map: if coordinates are available, center map and place marker
         if (eventData.lat && eventData.lng) {
           const eventLocation = { lat: parseFloat(eventData.lat), lng: parseFloat(eventData.lng) };
           map.setCenter(eventLocation);
@@ -197,7 +204,7 @@
   </header>
   
   <div class="container">
-    <!-- Event Images Section -->
+    <!-- Event Images Carousel -->
     <div class="event-images" id="imagesContainer">
       <!-- Images will be injected here -->
     </div>
@@ -205,10 +212,10 @@
     <!-- Event Title -->
     <h1 id="eventTitle">Loading Event...</h1>
     
-    <!-- Event Details Section -->
+    <!-- Event Details -->
     <div class="event-details">
-      <p id="eventDateTime"></p>
       <p id="eventLocation"></p>
+      <p id="eventDateTime"></p>
       <p id="eventDescription"></p>
     </div>
     
