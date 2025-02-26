@@ -9,7 +9,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script>
-    // Firebase configuration
+    // Firebase configuration – this must be loaded first so that Firestore is available.
     const firebaseConfig = {
       apiKey: "AIzaSyCmFpsG231lCdIJtHeN6mH-Bxd-LHzrgZg",
       authDomain: "eventsearchprototype.firebaseapp.com",
@@ -32,7 +32,7 @@
     form { display: flex; flex-direction: column; }
     label { font-weight: bold; margin-top: 10px; }
     input, textarea, select { padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; }
-    /* Image preview container */
+    /* Image Preview */
     #imagePreview { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
     #imagePreview img { height: 100px; border-radius: 5px; object-fit: cover; }
     /* Map container */
@@ -44,38 +44,38 @@
     }
   </style>
   
-  <!-- Main Script: Image Preview Handler -->
+  <!-- Script for image preview; placed in head and wrapped in DOMContentLoaded -->
   <script>
-    // Preview selected images in reverse order (last selected appears first)
-    function previewImages() {
-      const previewContainer = document.getElementById("imagePreview");
-      previewContainer.innerHTML = ""; // Clear previous previews
-      const files = document.getElementById("eventImages").files;
-      const fileArray = Array.from(files).reverse();
-      fileArray.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const img = document.createElement("img");
-          img.src = e.target.result;
-          previewContainer.appendChild(img);
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-    document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById("eventImages").addEventListener("change", previewImages);
+    document.addEventListener("DOMContentLoaded", function() {
+      const imageInput = document.getElementById("eventImages");
+      if (imageInput) {
+        imageInput.addEventListener("change", function() {
+          const previewContainer = document.getElementById("imagePreview");
+          previewContainer.innerHTML = "";
+          const files = imageInput.files;
+          const fileArray = Array.from(files).reverse();
+          fileArray.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              const img = document.createElement("img");
+              img.src = e.target.result;
+              previewContainer.appendChild(img);
+            };
+            reader.readAsDataURL(file);
+          });
+        });
+      }
     });
   </script>
   
-  <!-- Google Maps API -->
-  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0"></script>
+  <!-- Google Maps API: Use async, defer, and callback so initMap is called when loaded -->
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0&callback=initMap"></script>
   
-  <!-- Map and Geocoding Script -->
+  <!-- Map and Geocoding Functions -->
   <script>
     let map, marker;
-    
-    // Initialize the map in the #map container
-    function initMap() {
+    // Define initMap globally so the Google Maps API can call it
+    window.initMap = function() {
       const mapDiv = document.getElementById("map");
       if (!mapDiv) {
         console.error("Error: Map container not found!");
@@ -85,13 +85,13 @@
         center: { lat: 31.5204, lng: 74.3587 }, // Default center (Lahore)
         zoom: 12
       });
-      // Allow users to set marker by clicking on the map
+      // Allow user to set marker by clicking on the map
       map.addListener("click", function(e) {
         placeMarker(e.latLng);
       });
-    }
-    
-    // Place or update the marker and update hidden fields
+    };
+
+    // Place or update marker and update hidden lat/lng fields
     function placeMarker(location) {
       if (marker) {
         marker.setPosition(location);
@@ -104,12 +104,11 @@
       document.getElementById("lat").value = location.lat();
       document.getElementById("lng").value = location.lng();
     }
-    
-    // Geocode the manually entered address and update the map
+
+    // Geocode manual address input when field loses focus
     function geocodeAddress() {
       const address = document.getElementById("manualLocation").value;
       if (!address) return;
-      // Ensure the Google Maps API is loaded
       if (typeof google === "undefined" || !google.maps || !google.maps.Geocoder) {
         console.error("Google Maps API not loaded yet.");
         return;
@@ -125,23 +124,18 @@
         }
       });
     }
-    
-    // Initialize map when DOM is loaded
-    document.addEventListener("DOMContentLoaded", () => {
-      initMap();
-    });
   </script>
   
-  <!-- Main Script for Handling Province/City Dropdowns and Form Submission -->
+  <!-- Script for province/city dropdowns and form submission -->
   <script>
-    // Mapping for Pakistan provinces and major cities
+    // Mapping for Pakistan provinces and cities (Sialkot included in Punjab)
     const provinceToCities = {
       "Punjab": ["Lahore", "Faisalabad", "Rawalpindi", "Gujranwala", "Sialkot"],
       "Sindh": ["Karachi", "Hyderabad", "Sukkur"],
       "Khyber Pakhtunkhwa": ["Peshawar", "Abbottabad", "Mardan"],
       "Balochistan": ["Quetta", "Gwadar"]
     };
-    
+
     // Populate city dropdown based on selected province
     function populateCitySelect(province) {
       const citySelect = document.getElementById("citySelect");
@@ -155,58 +149,58 @@
         });
       }
     }
-    
-    // Listen for changes in province dropdown to populate city dropdown
-    document.addEventListener("DOMContentLoaded", () => {
+
+    // Attach event listener to province dropdown for dynamic city population
+    document.addEventListener("DOMContentLoaded", function() {
       document.getElementById("provinceSelect").addEventListener("change", function(e) {
         populateCitySelect(e.target.value);
       });
     });
-    
-    // Handle form submission
-    document.getElementById("createEventForm").addEventListener("submit", async function(e) {
-      e.preventDefault();
-      
-      // Collect form values
-      const title = document.getElementById("eventTitle").value;
-      const description = document.getElementById("eventDescription").value;
-      const province = document.getElementById("provinceSelect").value;
-      const city = document.getElementById("citySelect").value;
-      const manualLocation = document.getElementById("manualLocation").value;
-      const fullLocation = `${manualLocation} (${city}, ${province})`;
-      const lat = document.getElementById("lat").value;
-      const lng = document.getElementById("lng").value;
-      
-      // Process images: reverse the order so last selected appears first; simulate image URLs using dummyimage.com
-      const imageUrls = [];
-      const files = document.getElementById("eventImages").files;
-      const fileArray = Array.from(files).reverse();
-      fileArray.forEach(file => {
-        imageUrls.push(`https://dummyimage.com/300x150/cccccc/000000?text=${encodeURIComponent(title)}`);
-      });
-      
-      try {
-        // Save event data to Firestore, including location info and map coordinates
-        const docRef = await db.collection("events").add({
-          title: title,
-          description: description,
-          location: fullLocation,
-          province: province,
-          city: city,
-          date: "",  // Add date/time if needed
-          time: "",
-          imageUrls: imageUrls,
-          lat: lat,
-          lng: lng,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+
+    // Handle form submission and redirect with event ID
+    document.addEventListener("DOMContentLoaded", function() {
+      document.getElementById("createEventForm").addEventListener("submit", async function(e) {
+        e.preventDefault();
+        
+        const title = document.getElementById("eventTitle").value;
+        const description = document.getElementById("eventDescription").value;
+        const province = document.getElementById("provinceSelect").value;
+        const city = document.getElementById("citySelect").value;
+        const manualLocation = document.getElementById("manualLocation").value;
+        const fullLocation = `${manualLocation} (${city}, ${province})`;
+        const lat = document.getElementById("lat").value;
+        const lng = document.getElementById("lng").value;
+        
+        // Process images in reverse order and simulate image URLs
+        const imageUrls = [];
+        const files = document.getElementById("eventImages").files;
+        const fileArray = Array.from(files).reverse();
+        fileArray.forEach(file => {
+          imageUrls.push(`https://dummyimage.com/300x150/cccccc/000000?text=${encodeURIComponent(title)}`);
         });
-        alert("Event submitted successfully!");
-        // Redirect to event-submitted page with eventId in query string
-        window.location.href = "event-submitted.html?eventId=" + docRef.id;
-      } catch (error) {
-        console.error("Error adding event:", error);
-        alert("Error submitting event.");
-      }
+        
+        try {
+          const docRef = await db.collection("events").add({
+            title: title,
+            description: description,
+            location: fullLocation,
+            province: province,
+            city: city,
+            date: "", // Add date/time if needed
+            time: "",
+            imageUrls: imageUrls,
+            lat: lat,
+            lng: lng,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          alert("Event submitted successfully!");
+          // Redirect to event-submitted page with event ID
+          window.location.href = "event-submitted.html?eventId=" + docRef.id;
+        } catch (error) {
+          console.error("Error adding event:", error);
+          alert("Error submitting event.");
+        }
+      });
     });
   </script>
 </head>
@@ -222,7 +216,7 @@
   <div class="container">
     <h1>Create Event</h1>
     <form id="createEventForm">
-      <!-- 1. Image Preview & Image Upload -->
+      <!-- 1. Image Preview & Upload -->
       <label>Image Preview:</label>
       <div id="imagePreview"></div>
       <label for="eventImages">Upload Images (select one or more):</label>
@@ -248,10 +242,10 @@
       <label for="citySelect">Select City:</label>
       <select id="citySelect" name="citySelect" required>
         <option value="">Select City</option>
-        <!-- Cities populated dynamically -->
+        <!-- Cities populated dynamically based on province -->
       </select>
       
-      <!-- 5. Manual Location Input & Integrated Map -->
+      <!-- 5. Manual Location Input & Map Integration -->
       <label for="manualLocation">Enter Location (address):</label>
       <input type="text" id="manualLocation" name="manualLocation" placeholder="e.g., Street, Area" onblur="geocodeAddress()">
       <label>Pick Location on Map:</label>
