@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Event Search Prototype</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+  
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -22,7 +22,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
   </script>
-
+  
   <!-- CSS Styles -->
   <style>
     /* Base styles */
@@ -171,15 +171,16 @@
     let currentCountry = "";
     let currentCity = "";
     
-    // For Pakistan, a sample mapping of provinces to major cities
+    // Sample mapping for Pakistan provinces and their major cities.
+    // For a robust solution, consider using an external dataset or API.
     const pakistanData = {
-      "Punjab": ["Lahore", "Rawalpindi", "Faisalabad"],
-      "Sindh": ["Karachi", "Hyderabad"],
-      "Khyber Pakhtunkhwa": ["Peshawar", "Abbottabad"],
-      "Balochistan": ["Quetta"]
+      "Punjab": ["Lahore", "Faisalabad", "Rawalpindi", "Gujranwala"],
+      "Sindh": ["Karachi", "Hyderabad", "Sukkur"],
+      "Khyber Pakhtunkhwa": ["Peshawar", "Abbottabad", "Mardan"],
+      "Balochistan": ["Quetta", "Gwadar"]
     };
     
-    // Populate city dropdown based on selected province
+    // Populate the city dropdown based on the selected province
     function updateCityDropdown(province) {
       const citySelect = document.getElementById("cityFilter");
       citySelect.innerHTML = `<option value="">Select City</option>`;
@@ -213,12 +214,9 @@
       const eventList = document.getElementById("eventList");
       eventList.innerHTML = "";
       const filteredItems = events.filter(item => {
-        // Check text search
         const matchesQuery = item.title.toLowerCase().includes(currentQuery) ||
                              item.description.toLowerCase().includes(currentQuery);
-        // Check type filter
         const matchesType = currentFilter === "all" ? true : item.type === currentFilter;
-        // Check location filters: event location should include selected country and city if set
         const matchesCountry = currentCountry ? item.location.toLowerCase().includes(currentCountry.toLowerCase()) : true;
         const matchesCity = currentCity ? item.location.toLowerCase().includes(currentCity.toLowerCase()) : true;
         return matchesQuery && matchesType && matchesCountry && matchesCity;
@@ -233,7 +231,6 @@
         const card = document.createElement("div");
         card.className = "event-card";
         card.onclick = () => { window.location.href = "event.html?id=" + item.id; };
-        // Use dummyimage.com for images
         const imageUrl = item.imageUrls && item.imageUrls.length > 0 
           ? item.imageUrls[0].replace("via.placeholder.com", "dummyimage.com")
           : "https://dummyimage.com/300x150/cccccc/000000?text=No+Image";
@@ -266,12 +263,10 @@
         loadEvents();
       });
       
-      // Province (Country) filter for Pakistan (we limit to Pakistan)
+      // Province filter listener (for Pakistan, we use provinces)
       document.getElementById("countryFilter").addEventListener("change", function(e) {
         currentCountry = e.target.value;
-        // When province is selected, update the city dropdown
         updateCityDropdown(currentCountry);
-        // Reset city selection
         currentCity = "";
         document.getElementById("cityFilter").value = "";
         loadEvents();
@@ -283,18 +278,21 @@
         loadEvents();
       });
       
-      // Auto-detect location using a CORS-friendly API (geolocation-db.com)
-      fetch("https://geolocation-db.com/json/")
+      // Auto-detect location using a CORS-friendly API (ipwhois alternative: ipwhois.app)
+      fetch("https://ipwhois.app/json/")
         .then(response => response.json())
         .then(data => {
-          if (data.country_name && data.country_name.toLowerCase() === "pakistan") {
-            document.getElementById("countryFilter").value = "Pakistan";
-            currentCountry = "Pakistan";
-            updateCityDropdown("Pakistan");
-          }
-          if (data.city) {
-            document.getElementById("cityFilter").value = data.city;
-            currentCity = data.city;
+          if (data.country === "Pakistan") {
+            // If the API returns region (province) and city, use them
+            if (data.region) {
+              document.getElementById("countryFilter").value = data.region;
+              currentCountry = data.region;
+              updateCityDropdown(data.region);
+            }
+            if (data.city) {
+              document.getElementById("cityFilter").value = data.city;
+              currentCity = data.city;
+            }
           }
           loadEvents();
         })
@@ -329,7 +327,7 @@
         </select>
         <select id="cityFilter">
           <option value="">Select City</option>
-          <!-- Cities will be populated dynamically based on province selection -->
+          <!-- Cities will be populated based on province selection -->
         </select>
       </div>
     </div>
@@ -341,7 +339,7 @@
     </div>
     
     <div class="event-list" id="eventList">
-      <!-- Event cards will be dynamically injected here -->
+      <!-- Event cards will be dynamically injected here from Firestore -->
     </div>
   </div>
 </body>
