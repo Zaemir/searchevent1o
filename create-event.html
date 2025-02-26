@@ -9,7 +9,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script>
-    // Firebase configuration – must be loaded before other scripts
+    // Firebase configuration – must be loaded first so that Firestore is available.
     const firebaseConfig = {
       apiKey: "AIzaSyCmFpsG231lCdIJtHeN6mH-Bxd-LHzrgZg",
       authDomain: "eventsearchprototype.firebaseapp.com",
@@ -44,12 +44,12 @@
     }
   </style>
   
-  <!-- Main Script: Image Preview Handler -->
+  <!-- Script for Image Preview -->
   <script>
     // Preview selected images in reverse order (last selected appears first)
     function previewImages() {
       const previewContainer = document.getElementById("imagePreview");
-      previewContainer.innerHTML = ""; // Clear previous previews
+      previewContainer.innerHTML = "";
       const files = document.getElementById("eventImages").files;
       const fileArray = Array.from(files).reverse();
       fileArray.forEach(file => {
@@ -67,7 +67,7 @@
     });
   </script>
   
-  <!-- Google Maps API: Use async defer and callback -->
+  <!-- Google Maps API: async, defer with callback -->
   <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0&callback=initMap"></script>
   
   <!-- Map and Geocoding Script -->
@@ -84,13 +84,13 @@
         center: { lat: 31.5204, lng: 74.3587 }, // Default center (Lahore)
         zoom: 12
       });
-      // Allow user to set marker by clicking on the map
+      // Allow setting marker on map click
       map.addListener("click", function(e) {
         placeMarker(e.latLng);
       });
     };
     
-    // Place or update marker and update hidden latitude/longitude fields
+    // Place or update marker and update hidden lat/lng fields
     function placeMarker(location) {
       if (marker) {
         marker.setPosition(location);
@@ -104,7 +104,7 @@
       document.getElementById("lng").value = location.lng();
     }
     
-    // Geocode manual address input and update map
+    // Geocode manual address and update map
     function geocodeAddress() {
       const address = document.getElementById("manualLocation").value;
       if (!address) return;
@@ -125,9 +125,9 @@
     }
   </script>
   
-  <!-- Script for Province/City Dropdown and Form Submission -->
+  <!-- Script for Province/City Dropdowns and Form Submission -->
   <script>
-    // Mapping for provinces and cities (Sialkot included in Punjab)
+    // Mapping for Pakistan provinces and cities
     const provinceToCities = {
       "Punjab": ["Lahore", "Faisalabad", "Rawalpindi", "Gujranwala", "Sialkot"],
       "Sindh": ["Karachi", "Hyderabad", "Sukkur"],
@@ -149,30 +149,27 @@
       }
     }
 
-    // Attach event listener for province selection changes
-    document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", () => {
+      // Province dropdown listener
       document.getElementById("provinceSelect").addEventListener("change", function(e) {
         populateCitySelect(e.target.value);
       });
-    });
-
-    // Handle form submission with redirection carrying event ID
-    document.addEventListener("DOMContentLoaded", function() {
+      
+      // Form submission handling with redirection including event ID
       document.getElementById("createEventForm").addEventListener("submit", async function(e) {
         e.preventDefault();
         
-        // Collect form data
+        // Collect form values (all required)
         const title = document.getElementById("eventTitle").value;
         const description = document.getElementById("eventDescription").value;
         const province = document.getElementById("provinceSelect").value;
         const city = document.getElementById("citySelect").value;
         const manualLocation = document.getElementById("manualLocation").value;
-        // Construct a full location string
         const fullLocation = `${manualLocation} (${city}, ${province})`;
         const lat = document.getElementById("lat").value;
         const lng = document.getElementById("lng").value;
         
-        // Process images in reverse order (last selected first) and simulate image URLs
+        // Process images (reverse order so last selected is first)
         const imageUrls = [];
         const files = document.getElementById("eventImages").files;
         const fileArray = Array.from(files).reverse();
@@ -187,7 +184,7 @@
             location: fullLocation,
             province: province,
             city: city,
-            date: "", // Add date/time if needed
+            date: "", // Date and time can be added here if needed
             time: "",
             imageUrls: imageUrls,
             lat: lat,
@@ -195,7 +192,6 @@
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
           alert("Event submitted successfully!");
-          // Redirect to event-submitted page with the event ID in the query string
           window.location.href = "event-submitted.html?eventId=" + docRef.id;
         } catch (error) {
           console.error("Error adding event:", error);
@@ -217,7 +213,7 @@
   <div class="container">
     <h1>Create Event</h1>
     <form id="createEventForm">
-      <!-- 1. Image Preview & Image Upload -->
+      <!-- 1. Image Preview & Upload -->
       <label>Image Preview:</label>
       <div id="imagePreview"></div>
       <label for="eventImages">Upload Images (select one or more):</label>
@@ -243,10 +239,10 @@
       <label for="citySelect">Select City:</label>
       <select id="citySelect" name="citySelect" required>
         <option value="">Select City</option>
-        <!-- Cities will be populated dynamically -->
+        <!-- Dynamically populated -->
       </select>
       
-      <!-- 5. Date & Time Section (Added between City selection and manual location) -->
+      <!-- 5. Date & Time Section -->
       <label for="eventDate">Date:</label>
       <input type="date" id="eventDate" name="eventDate" required>
       <label for="eventTime">Time:</label>
@@ -254,14 +250,14 @@
       
       <!-- 6. Manual Location Input & Map Integration -->
       <label for="manualLocation">Enter Location (address):</label>
-      <input type="text" id="manualLocation" name="manualLocation" placeholder="e.g., Street, Area" onblur="geocodeAddress()">
+      <input type="text" id="manualLocation" name="manualLocation" placeholder="e.g., Street, Area" onblur="geocodeAddress()" required>
       <label>Pick Location on Map:</label>
       <div id="map"></div>
-      <!-- Hidden inputs for latitude and longitude -->
+      <!-- Hidden fields for latitude and longitude -->
       <input type="hidden" id="lat" name="lat" required>
       <input type="hidden" id="lng" name="lng" required>
       
-      <!-- 7. Submit Button (Added extra margin above submit for spacing) -->
+      <!-- 7. Submit Button with extra spacing -->
       <div style="margin-top:20px;">
         <button type="submit">Submit Event</button>
       </div>
