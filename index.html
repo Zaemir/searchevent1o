@@ -340,4 +340,97 @@
       return `${dayFormatted} ${monthFormatted} ${dateObj.getFullYear()} at ${hourFormatted}:${("0" + dateObj.getMinutes()).slice(-2)} ${ampm}`;
     }
     
-    docum
+    document.addEventListener("DOMContentLoaded", () => {
+      // Search input listener
+      document.getElementById("searchInput").addEventListener("input", function(e) {
+        currentQuery = e.target.value.toLowerCase();
+        loadEvents();
+      });
+      
+      // Province filter listener
+      document.getElementById("countryFilter").addEventListener("change", function(e) {
+        currentCountry = e.target.value;
+        updateCityDropdown(currentCountry);
+        currentCity = "";
+        document.getElementById("cityFilter").value = "";
+        loadEvents();
+      });
+      
+      // City filter listener
+      document.getElementById("cityFilter").addEventListener("change", function(e) {
+        currentCity = e.target.value;
+        loadEvents();
+      });
+      
+      // Auto-detect location using a CORS-friendly API (ipwhois.app)
+      fetch("https://ipwhois.app/json/")
+        .then(response => response.json())
+        .then(data => {
+          if (data.country_code === "PK") {
+            // Use region if available; if not, default to Punjab
+            const province = data.region || "Punjab";
+            document.getElementById("countryFilter").value = province;
+            currentCountry = province;
+            updateCityDropdown(province);
+            if (data.city) {
+              document.getElementById("cityFilter").value = data.city;
+              currentCity = data.city;
+            }
+          }
+          loadEvents();
+        })
+        .catch(error => console.error("Error fetching IP location:", error));
+      
+      // Initial load of events
+      loadEvents();
+    });
+  </script>
+</head>
+<body>
+  <header>
+    <div class="logo"><a href="index.html"><h2>EventSearch</h2></a></div>
+    <nav>
+      <a href="auth.html">Sign In</a>
+      <a href="create-event.html">Create Event</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <div class="profile" title="Profile"></div>
+  </header>
+  
+  <div class="container">
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Search events and places...">
+      <div class="location-filters">
+        <select id="countryFilter">
+          <option value="">Select Province</option>
+          <option value="Punjab">Punjab</option>
+          <option value="Sindh">Sindh</option>
+          <option value="Khyber Pakhtunkhwa">Khyber Pakhtunkhwa</option>
+          <option value="Balochistan">Balochistan</option>
+        </select>
+        <select id="cityFilter">
+          <option value="">Select City</option>
+          <!-- Cities will be populated dynamically -->
+        </select>
+      </div>
+    </div>
+    
+    <div class="filters">
+      <button id="btnAll" class="active" onclick="filterType('all')">All</button>
+      <button id="btnEvents" onclick="filterType('event')">Events</button>
+      <button id="btnPlaces" onclick="filterType('place')">Places</button>
+    </div>
+    
+    <div class="event-list" id="eventList">
+      <!-- Event cards will be dynamically injected here -->
+    </div>
+    
+    <div class="recommendations" id="recommendations">
+      <h2>Recommended Events</h2>
+      <div class="event-list" id="recommendationList">
+        <!-- Recommended events will be injected here -->
+      </div>
+    </div>
+  </div>
+</body>
+</html>
