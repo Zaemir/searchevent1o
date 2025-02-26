@@ -36,9 +36,9 @@
       padding: 15px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       display: flex;
-      justify-content: space-between;
-      align-items: center;
       flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
     }
     header .logo h2 {
       margin: 0;
@@ -72,28 +72,39 @@
       border-radius: 5px;
     }
     
-    /* Search bar */
+    /* Search Bar and Filters */
     .search-bar {
       display: flex;
-      justify-content: center;
-      margin: 20px 0;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
     }
     .search-bar input {
       width: 100%;
-      max-width: 600px;
       padding: 10px;
       font-size: 1.2em;
       border: 1px solid #ccc;
       border-radius: 5px;
     }
-    
-    /* Filters */
+    .location-filters {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .location-filters select {
+      padding: 10px;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      flex: 1;
+      min-width: 120px;
+    }
     .filters {
       display: flex;
       justify-content: center;
       gap: 10px;
-      margin-bottom: 20px;
       flex-wrap: wrap;
+      margin-bottom: 20px;
     }
     .filters button {
       padding: 10px 20px;
@@ -144,27 +155,19 @@
     
     /* Responsive adjustments */
     @media (max-width: 600px) {
-      header .logo h2 {
-        font-size: 1.5em;
-      }
-      nav a {
-        font-size: 0.9em;
-        padding: 5px 8px;
-      }
-      .search-bar input {
-        font-size: 1em;
-      }
-      .filters button {
-        font-size: 0.9em;
-        padding: 8px 15px;
-      }
+      header .logo h2 { font-size: 1.5em; }
+      nav a { font-size: 0.9em; padding: 5px 8px; }
+      .search-bar input { font-size: 1em; }
+      .location-filters select, .filters button { font-size: 0.9em; padding: 8px 12px; }
     }
   </style>
   
-  <!-- Main Script: Fetch and render events from Firestore -->
+  <!-- Main Script: Fetch and Render Events from Firestore -->
   <script>
     let currentFilter = 'all';
     let currentQuery = "";
+    let currentCountry = "";
+    let currentCity = "";
     
     async function loadEvents() {
       try {
@@ -173,7 +176,6 @@
         snapshot.forEach(doc => {
           const data = doc.data();
           data.id = doc.id;
-          // Ensure type is defined; default to "event"
           data.type = data.type || "event";
           events.push(data);
         });
@@ -187,10 +189,15 @@
       const eventList = document.getElementById("eventList");
       eventList.innerHTML = "";
       const filteredItems = events.filter(item => {
+        // Check text search
         const matchesQuery = item.title.toLowerCase().includes(currentQuery) ||
                              item.description.toLowerCase().includes(currentQuery);
+        // Check type filter
         const matchesType = currentFilter === "all" ? true : item.type === currentFilter;
-        return matchesQuery && matchesType;
+        // Check location filter if set: match if event location includes the selected country and city (case insensitive)
+        const matchesCountry = currentCountry ? item.location.toLowerCase().includes(currentCountry.toLowerCase()) : true;
+        const matchesCity = currentCity ? item.location.toLowerCase().includes(currentCity.toLowerCase()) : true;
+        return matchesQuery && matchesType && matchesCountry && matchesCity;
       });
       
       if (filteredItems.length === 0) {
@@ -202,7 +209,7 @@
         const card = document.createElement("div");
         card.className = "event-card";
         card.onclick = () => { window.location.href = "event.html?id=" + item.id; };
-        // Use dummyimage.com for fallback images; if no image, use a default URL
+        // Use dummyimage.com for images; if missing, fallback to default image URL.
         const imageUrl = item.imageUrls && item.imageUrls.length > 0 
           ? item.imageUrls[0].replace("via.placeholder.com", "dummyimage.com")
           : "https://dummyimage.com/300x150/cccccc/000000?text=No+Image";
@@ -222,19 +229,47 @@
       document.getElementById("btnAll").classList.remove("active");
       document.getElementById("btnEvents").classList.remove("active");
       document.getElementById("btnPlaces").classList.remove("active");
-      
       if (type === "all") document.getElementById("btnAll").classList.add("active");
       if (type === "event") document.getElementById("btnEvents").classList.add("active");
       if (type === "place") document.getElementById("btnPlaces").classList.add("active");
-      
       loadEvents();
     }
     
     document.addEventListener("DOMContentLoaded", () => {
+      // Search input listener
       document.getElementById("searchInput").addEventListener("input", function(e) {
         currentQuery = e.target.value.toLowerCase();
         loadEvents();
       });
+      // Country filter listener
+      document.getElementById("countryFilter").addEventListener("change", function(e) {
+        currentCountry = e.target.value;
+        // Optionally update city dropdown based on selected country
+        loadEvents();
+      });
+      // City filter listener
+      document.getElementById("cityFilter").addEventListener("change", function(e) {
+        currentCity = e.target.value;
+        loadEvents();
+      });
+      
+      // Auto-detect location using IP geolocation API (ipapi.co)
+      fetch("https://ipapi.co/json/")
+        .then(response => response.json())
+        .then(data => {
+          if (data.country_name) {
+            document.getElementById("countryFilter").value = data.country_name;
+            currentCountry = data.country_name;
+          }
+          if (data.city) {
+            document.getElementById("cityFilter").value = data.city;
+            currentCity = data.city;
+          }
+          loadEvents();
+        })
+        .catch(error => console.error("Error fetching IP location:", error));
+      
+      // Initial load of events
       loadEvents();
     });
   </script>
@@ -253,6 +288,21 @@
   <div class="container">
     <div class="search-bar">
       <input type="text" id="searchInput" placeholder="Search events and places...">
+      <div class="location-filters">
+        <select id="countryFilter">
+          <option value="">Select Country</option>
+          <option value="United States">United States</option>
+          <option value="United Kingdom">United Kingdom</option>
+          <option value="Canada">Canada</option>
+          <option value="India">India</option>
+          <option value="Pakistan">Pakistan</option>
+          <!-- Add more countries as needed -->
+        </select>
+        <select id="cityFilter">
+          <option value="">Select City</option>
+          <!-- For simplicity, let users type their city or you can pre-populate based on country -->
+        </select>
+      </div>
     </div>
     <div class="filters">
       <button id="btnAll" class="active" onclick="filterType('all')">All</button>
@@ -260,7 +310,7 @@
       <button id="btnPlaces" onclick="filterType('place')">Places</button>
     </div>
     <div class="event-list" id="eventList">
-      <!-- Event cards will be dynamically injected here from Firestore -->
+      <!-- Event cards will be dynamically injected here -->
     </div>
   </div>
 </body>
