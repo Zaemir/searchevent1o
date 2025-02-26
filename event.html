@@ -1,226 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Event Details</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <!-- CSS Styles for a modern, responsive UI -->
-  <style>
-    /* Base Styles */
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f4f4f4;
-      margin: 0;
-      padding: 20px;
-    }
-    header {
-      background: #fff;
-      padding: 15px 20px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
-    }
-    nav a {
-      margin: 0 10px;
-      text-decoration: none;
-      color: #333;
-      font-weight: 500;
-    }
-    .container {
-      max-width: 800px;
-      background: #fff;
-      margin: 0 auto;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    /* Event Images Carousel */
-    .event-images {
-      display: flex;
-      gap: 10px;
-      overflow-x: auto;
-      margin-bottom: 20px;
-      padding-bottom: 10px;
-    }
-    .event-images img {
-      height: 220px;
-      border-radius: 8px;
-      object-fit: cover;
-    }
-    /* Event Title */
-    #eventTitle {
-      font-size: 2em;
-      margin: 10px 0;
-      color: #222;
-    }
-    /* Event Details */
-    .event-details {
-      margin-bottom: 20px;
-    }
-    .event-details p {
-      font-size: 1.1em;
-      color: #444;
-      margin: 6px 0;
-      line-height: 1.6;
-    }
-    /* Map Container */
-    #map {
-      width: 100%;
-      height: 300px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      margin-top: 20px;
-    }
-    /* Responsive Adjustments */
-    @media (max-width: 600px) {
-      #eventTitle {
-        font-size: 1.5em;
-      }
-      .event-details p {
-        font-size: 0.95em;
-      }
-      .event-images img {
-        height: 180px;
-      }
-    }
-  </style>
-  
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-  <script>
-    // Firebase configuration (required for Firestore access)
-    const firebaseConfig = {
-      apiKey: "AIzaSyCmFpsG231lCdIJtHeN6mH-Bxd-LHzrgZg",
-      authDomain: "eventsearchprototype.firebaseapp.com",
-      projectId: "eventsearchprototype",
-      storageBucket: "eventsearchprototype.firebasestorage.app",
-      messagingSenderId: "1090688920321",
-      appId: "1:1090688920321:web:3b6c399e2686e1e2718900",
-      measurementId: "G-KRG9R9WBF2"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-  </script>
-  
-  <!-- Google Maps API with async, defer, and callback -->
-  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0&callback=initMap"></script>
-  
-  <!-- Map & Event Data Script -->
-  <script>
-    let map, marker;
-    
-    // Global function invoked by Google Maps API
-    window.initMap = function() {
-      const mapDiv = document.getElementById("map");
-      if (!mapDiv) {
-        console.error("Map container not found!");
-        return;
-      }
-      // Initialize map with a default center (Lahore)
-      map = new google.maps.Map(mapDiv, {
-        center: { lat: 31.5204, lng: 74.3587 },
-        zoom: 12
-      });
-    };
-
-    // Function to place/update marker on map
-    function placeMarker(location) {
-      if (marker) {
-        marker.setPosition(location);
-      } else {
-        marker = new google.maps.Marker({
-          position: location,
-          map: map
-        });
-      }
-    }
-
-    // Fetch event data from Firestore and populate the page
-    document.addEventListener("DOMContentLoaded", async () => {
-      const params = new URLSearchParams(window.location.search);
-      const eventId = params.get("id");
-      if (!eventId) {
-        document.querySelector(".container").innerHTML = "<p>No event ID provided.</p>";
-        return;
-      }
-      try {
-        const doc = await db.collection("events").doc(eventId).get();
-        if (!doc.exists) {
-          document.querySelector(".container").innerHTML = "<p>Event not found.</p>";
-          return;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Details</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            margin: 0;
+            padding: 20px;
         }
-        const eventData = doc.data();
-        
-        // Update event images carousel
-        const imagesContainer = document.getElementById("imagesContainer");
-        imagesContainer.innerHTML = "";
-        if (eventData.imageUrls && eventData.imageUrls.length > 0) {
-          eventData.imageUrls.forEach(url => {
-            const img = document.createElement("img");
-            img.src = url;
-            img.alt = eventData.title;
-            imagesContainer.appendChild(img);
-          });
+        .container {
+            max-width: 800px;
+            background: #fff;
+            margin: 0 auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        
-        // Update event title
-        document.getElementById("eventTitle").textContent = eventData.title || "Untitled Event";
-        
-        // Update event location text (province and city)
-        document.getElementById("eventLocation").textContent = eventData.location || "Location not provided";
-        
-        // Update date & time
-        if (eventData.date && eventData.time) {
-          document.getElementById("eventDateTime").textContent = `${eventData.date} at ${eventData.time}`;
-        } else {
-          document.getElementById("eventDateTime").textContent = "Date/Time not provided";
+        .event-images {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            margin-bottom: 20px;
         }
-        
-        // Update event description
-        document.getElementById("eventDescription").textContent = eventData.description || "No description available.";
-        
-        // Update map: if coordinates are available, center map and place marker
-        if (eventData.lat && eventData.lng) {
-          const eventLocation = { lat: parseFloat(eventData.lat), lng: parseFloat(eventData.lng) };
-          map.setCenter(eventLocation);
-          placeMarker(eventLocation);
+        .event-images img {
+            height: 220px;
+            border-radius: 8px;
+            object-fit: cover;
         }
-      } catch (error) {
-        console.error("Error fetching event:", error);
-        document.querySelector(".container").innerHTML = "<p>Error loading event details.</p>";
-      }
-    });
-  </script>
+        h1, p {
+            margin: 10px 0;
+            color: #222;
+        }
+        #map {
+            width: 100%;
+            height: 300px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .shareable-link {
+            margin-top: 20px;
+            padding: 10px;
+            background: #007bff;
+            color: white;
+            text-align: center;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-  <header>
-    <nav>
-      <a href="index.html">Home</a>
-      <a href="auth.html">Sign In</a>
-      <a href="create-event.html">Create Event</a>
-      <a href="contact.html">Contact</a>
-    </nav>
-  </header>
-  
-  <div class="container">
-    <!-- Event Images Carousel -->
-    <div class="event-images" id="imagesContainer">
-      <!-- Images will be injected here -->
+    <div class="container">
+        <div class="event-images" id="imagesContainer"></div>
+        <h1 id="eventTitle">Loading Event...</h1>
+        <p><strong>Location:</strong> <span id="eventLocation"></span></p>
+        <p><strong>Time and Date:</strong> <span id="eventDateTime"></span></p>
+        <p><strong>Description:</strong> <span id="eventDescription"></span></p>
+        <div id="map"></div>
+        <p class="shareable-link">Bring your friend - Copy & Share</p>
     </div>
-    
-    <!-- Event Title -->
-    <h1 id="eventTitle">Loading Event...</h1>
-    
-    <!-- Event Details -->
-    <div class="event-details">
-      <p id="eventLocation"></p>
-      <p id="eventDateTime"></p>
-      <p id="eventDescription"></p>
-    </div>
-    
-    <!-- Integrated Map Section -->
-    <div id="map"></div>
-  </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            const params = new URLSearchParams(window.location.search);
+            const eventId = params.get("id");
+            if (!eventId) {
+                document.querySelector(".container").innerHTML = "<p>No event ID provided.</p>";
+                return;
+            }
+
+            // Fetch event data from Firestore (Dummy Data Here)
+            const eventData = {
+                title: "Music Fest 2025",
+                location: "New York, NY",
+                date: "March 15, 2025",
+                time: "7:00 PM",
+                description: "Join us for an unforgettable night of live music!",
+                imageUrls: ["event1.jpg", "event2.jpg"],
+                lat: 40.7128,
+                lng: -74.0060
+            };
+
+            document.getElementById("eventTitle").textContent = eventData.title;
+            document.getElementById("eventLocation").textContent = eventData.location;
+            document.getElementById("eventDateTime").textContent = `${eventData.date} at ${eventData.time}`;
+            document.getElementById("eventDescription").textContent = eventData.description;
+
+            const imagesContainer = document.getElementById("imagesContainer");
+            eventData.imageUrls.forEach(url => {
+                const img = document.createElement("img");
+                img.src = url;
+                imagesContainer.appendChild(img);
+            });
+        });
+    </script>
 </body>
 </html>
