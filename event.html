@@ -5,16 +5,18 @@
   <title>Event Details</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* Base styles */
+    /* Base Styles */
     body {
       font-family: Arial, sans-serif;
       background: #f4f4f4;
       margin: 0;
+      padding: 20px;
     }
     header {
       background: #fff;
       padding: 15px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
     }
     nav a {
       margin: 0 10px;
@@ -22,52 +24,45 @@
       color: #333;
     }
     .container {
-      width: 90%;
       max-width: 800px;
-      margin: 20px auto;
+      margin: 0 auto;
       background: #fff;
       padding: 20px;
       border-radius: 5px;
     }
-    /* Image Banner */
-    #imageBanner {
+    h1 {
+      font-size: 2em;
+      margin-bottom: 10px;
+      color: #333;
+    }
+    .details p {
+      margin: 5px 0;
+      font-size: 1em;
+      color: #555;
+      line-height: 1.5;
+    }
+    .images {
       display: flex;
-      overflow-x: auto;
       gap: 10px;
+      flex-wrap: wrap;
       margin-bottom: 20px;
     }
-    #imageBanner img {
-      height: 200px;
+    .images img {
+      width: 100%;
+      max-width: 300px;
       border-radius: 5px;
       object-fit: cover;
     }
-    /* Event Title */
-    #eventTitle {
-      font-size: 2em;
-      margin: 10px 0;
-      color: #333;
-    }
-    /* Section styling */
-    .section {
-      margin-bottom: 20px;
-    }
-    .section h2 {
-      font-size: 1.3em;
-      margin-bottom: 5px;
-      color: #555;
-    }
-    .section p {
-      font-size: 1.1em;
-      color: #444;
-      margin: 0;
-      line-height: 1.5;
-    }
-    /* Map container */
-    #mapContainer {
+    #map {
       width: 100%;
       height: 300px;
-      border: 1px solid #ddd;
+      margin-top: 20px;
+      border: 1px solid #ccc;
       border-radius: 5px;
+    }
+    @media (max-width: 600px) {
+      h1 { font-size: 1.5em; }
+      .details p { font-size: 0.9em; }
     }
   </style>
   
@@ -75,7 +70,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script>
-    // Firebase configuration (same as your other pages)
     const firebaseConfig = {
       apiKey: "AIzaSyCmFpsG231lCdIJtHeN6mH-Bxd-LHzrgZg",
       authDomain: "eventsearchprototype.firebaseapp.com",
@@ -89,75 +83,41 @@
     const db = firebase.firestore();
   </script>
   
-  <!-- Google Maps API with async and defer -->
-  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0"></script>
+  <!-- Google Maps API with async defer and callback -->
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0&callback=initMap"></script>
   
   <script>
     let map, marker;
-    // Define initMap in the global scope so it's accessible once the API loads.
+    // Global initMap function for the API callback
     window.initMap = function() {
-      const mapDiv = document.getElementById("mapContainer");
+      const mapDiv = document.getElementById("map");
       if (!mapDiv) {
-        console.error("Error: 'mapContainer' not found!");
+        console.error("Map container not found!");
         return;
       }
-      const defaultLoc = { lat: 37.7749, lng: -122.4194 }; // Default center: San Francisco
       map = new google.maps.Map(mapDiv, {
-        center: defaultLoc,
-        zoom: 12,
+        center: { lat: 31.5204, lng: 74.3587 }, // Default to Lahore
+        zoom: 12
       });
     };
 
-    // Update the map with event location
-    function setEventLocationOnMap(lat, lng) {
-      const location = { lat: lat, lng: lng };
-      if (map) {
-        map.setCenter(location);
-        if (marker) {
-          marker.setPosition(location);
-        } else {
-          marker = new google.maps.Marker({
-            position: location,
-            map: map,
-          });
-        }
+    // Place marker on the map and update hidden lat/lng values
+    function placeMarker(location) {
+      if (marker) {
+        marker.setPosition(location);
+      } else {
+        marker = new google.maps.Marker({
+          position: location,
+          map: map
+        });
       }
     }
-
-    // Helper: Get ordinal suffix for day numbers
-    function getOrdinal(day) {
-      if (day > 3 && day < 21) return day + "th";
-      switch (day % 10) {
-        case 1: return day + "st";
-        case 2: return day + "nd";
-        case 3: return day + "rd";
-        default: return day + "th";
-      }
-    }
-
-    // Format the date/time into a friendly string (e.g., "8th Nov 2025 at 10:00 PM")
-    function formatDateTime(dateStr, timeStr) {
-      const [year, month, day] = dateStr.split("-").map(Number);
-      const [hourStr, minuteStr] = timeStr.split(":").map(Number);
-      const dateObj = new Date(year, month - 1, day, hourStr, minuteStr);
-      
-      const dayFormatted = getOrdinal(dateObj.getDate());
-      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      const monthFormatted = monthNames[dateObj.getMonth()];
-      
-      let hour = dateObj.getHours();
-      const ampm = hour >= 12 ? "PM" : "AM";
-      hour = hour % 12 || 12;
-      
-      return `${dayFormatted} ${monthFormatted} ${dateObj.getFullYear()} at ${hour}:${("0" + dateObj.getMinutes()).slice(-2)} ${ampm}`;
-    }
-    
-    // Wait until the page fully loads, then fetch event data and update UI
-    window.onload = function() {
-      // Initialize Google Map
-      initMap();
-      
-      // Extract event ID from URL parameters
+  </script>
+  
+  <!-- Main Script: Fetch and Display Event Details -->
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Extract event ID from query parameters
       const params = new URLSearchParams(window.location.search);
       const eventId = params.get("id");
       if (!eventId) {
@@ -165,53 +125,51 @@
         return;
       }
       
-      // Fetch event data from Firestore
-      db.collection("events").doc(eventId).get()
-        .then(doc => {
-          if (!doc.exists) {
-            document.querySelector(".container").innerHTML = "<p>Event not found.</p>";
-            return;
-          }
-          const eventData = doc.data();
-          
-          // Update Image Banner (using dummyimage.com for placeholders)
-          const imageBanner = document.getElementById("imageBanner");
-          imageBanner.innerHTML = "";
-          if (eventData.imageUrls && eventData.imageUrls.length > 0) {
-            eventData.imageUrls.forEach(url => {
-              const img = document.createElement("img");
-              // Replace via.placeholder.com with dummyimage.com
-              img.src = url.replace("via.placeholder.com", "dummyimage.com");
-              img.alt = eventData.title;
-              imageBanner.appendChild(img);
-            });
-          } else {
-            imageBanner.innerHTML = "<p>No images available.</p>";
-          }
-          
-          // Update Event Title
-          document.getElementById("eventTitle").textContent = eventData.title || "Untitled Event";
-          
-          // Format and update Date & Time
-          const formattedDateTime = (eventData.date && eventData.time)
-            ? formatDateTime(eventData.date, eventData.time)
-            : "No date/time provided";
-          document.getElementById("eventDateTime").textContent = formattedDateTime;
-          
-          // Update Location and Description
-          document.getElementById("eventLocation").textContent = eventData.location || "No location provided";
-          document.getElementById("eventDescription").textContent = eventData.description || "No description available.";
-          
-          // Update the Map with event location, if available
-          if (eventData.lat && eventData.lng) {
-            setEventLocationOnMap(eventData.lat, eventData.lng);
-          }
-        })
-        .catch(error => {
-          console.error("Error fetching event:", error);
-          document.querySelector(".container").innerHTML = "<p>Error loading event details.</p>";
-        });
-    };
+      try {
+        const doc = await db.collection("events").doc(eventId).get();
+        if (!doc.exists) {
+          document.querySelector(".container").innerHTML = "<p>Event not found.</p>";
+          return;
+        }
+        const eventData = doc.data();
+        
+        // Populate event details
+        document.getElementById("eventTitle").textContent = eventData.title || "Untitled Event";
+        
+        // Display images (if available)
+        const imagesContainer = document.getElementById("imagesContainer");
+        if (eventData.imageUrls && eventData.imageUrls.length > 0) {
+          eventData.imageUrls.forEach(url => {
+            const img = document.createElement("img");
+            img.src = url; // Assuming URLs are valid
+            img.alt = eventData.title;
+            imagesContainer.appendChild(img);
+          });
+        }
+        
+        // Display date and time
+        const dateTimeElement = document.getElementById("eventDateTime");
+        if (eventData.date && eventData.time) {
+          dateTimeElement.textContent = `${eventData.date} at ${eventData.time}`;
+        } else {
+          dateTimeElement.textContent = "Date/Time not provided";
+        }
+        
+        // Display location and description
+        document.getElementById("eventLocation").textContent = eventData.location || "Location not provided";
+        document.getElementById("eventDescription").textContent = eventData.description || "No description available.";
+        
+        // Update the map if coordinates are available
+        if (eventData.lat && eventData.lng) {
+          const eventLocation = { lat: parseFloat(eventData.lat), lng: parseFloat(eventData.lng) };
+          map.setCenter(eventLocation);
+          placeMarker(eventLocation);
+        }
+      } catch (error) {
+        console.error("Error fetching event:", error);
+        document.querySelector(".container").innerHTML = "<p>Error loading event details.</p>";
+      }
+    });
   </script>
 </head>
 <body>
@@ -225,37 +183,14 @@
   </header>
   
   <div class="container">
-    <!-- Image Banner -->
-    <div id="imageBanner">
-      <!-- Images will be dynamically inserted here -->
-    </div>
-    
-    <!-- Event Title -->
     <h1 id="eventTitle">Loading Event...</h1>
-    
-    <!-- Date & Time Section -->
-    <div class="section">
-      <h2>Date & Time</h2>
-      <p id="eventDateTime">Loading...</p>
+    <div id="imagesContainer" class="images"></div>
+    <div class="details">
+      <p id="eventDateTime"></p>
+      <p id="eventLocation"></p>
+      <p id="eventDescription"></p>
     </div>
-    
-    <!-- Location Section -->
-    <div class="section">
-      <h2>Location</h2>
-      <p id="eventLocation">Loading...</p>
-    </div>
-    
-    <!-- Description Section -->
-    <div class="section">
-      <h2>Description</h2>
-      <p id="eventDescription">Loading...</p>
-    </div>
-    
-    <!-- Map Section -->
-    <div class="section">
-      <h2>Map</h2>
-      <div id="mapContainer"></div>
-    </div>
+    <div id="map"></div>
   </div>
 </body>
 </html>
