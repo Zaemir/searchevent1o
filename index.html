@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <title>Event Search Prototype</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+  
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script>
-    // Firebase configuration (unchanged)
+    // Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyCmFpsG231lCdIJtHeN6mH-Bxd-LHzrgZg",
       authDomain: "eventsearchprototype.firebaseapp.com",
@@ -22,7 +22,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
   </script>
-
+  
   <!-- CSS Styles -->
   <style>
     /* Base styles */
@@ -125,13 +125,11 @@
     .event-list {
       display: grid;
       gap: 20px;
-      /* Default for laptop: 4 cards per row */
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(4, 1fr); /* 4 per row on large screens */
     }
     @media (max-width: 600px) {
-      /* On mobile: 2 cards per row */
       .event-list {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, 1fr); /* 2 per row on mobile */
       }
     }
     .event-card {
@@ -187,13 +185,14 @@
     let currentQuery = "";
     let currentCountry = "";
     let currentCity = "";
-    
-    // Helper function to normalize strings for comparison
+    let userLocation = null; // To store user latitude and longitude
+
+    // Helper to normalize strings
     function normalizeString(str) {
       return str ? str.toLowerCase().trim() : "";
     }
     
-    // Mapping for Pakistan provinces and major cities (Sialkot included in Punjab)
+    // Mapping for Pakistan provinces and major cities (Sialkot included)
     const pakistanData = {
       "Punjab": ["Lahore", "Faisalabad", "Rawalpindi", "Gujranwala", "Sialkot"],
       "Sindh": ["Karachi", "Hyderabad", "Sukkur"],
@@ -215,6 +214,19 @@
       }
     }
     
+    // Haversine formula to compute distance (in km)
+    function computeDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371; // Radius of the Earth in km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+    
     async function loadEvents() {
       try {
         const snapshot = await db.collection("events").get();
@@ -228,7 +240,7 @@
         
         let filteredItems = [];
         if (currentQuery) {
-          // If a search query is present, filter by text then sort by city match if selected.
+          // Filter by search query and sort by city match if selected
           filteredItems = events.filter(item =>
             normalizeString(item.title).includes(normalizeString(currentQuery)) ||
             normalizeString(item.description).includes(normalizeString(currentQuery))
@@ -241,7 +253,7 @@
             });
           }
         } else {
-          // Without a search query, filter by location if set.
+          // Without search query, filter by selected province/city
           filteredItems = events.filter(item => {
             let matches = true;
             if (currentCountry) {
@@ -252,9 +264,13 @@
             }
             return matches;
           });
-          // Fallback: if no events match location filters, show all events.
-          if (filteredItems.length === 0) {
-            filteredItems = events;
+          // If filtering yields no events, use all events
+          if (filteredItems.length === 0 && userLocation) {
+            filteredItems = events.sort((a, b) => {
+              const distA = a.lat && a.lng ? computeDistance(userLocation.lat, userLocation.lng, a.lat, a.lng) : Infinity;
+              const distB = b.lat && b.lng ? computeDistance(userLocation.lat, userLocation.lng, b.lat, b.lng) : Infinity;
+              return distA - distB;
+            });
           }
         }
         renderItems(filteredItems);
@@ -289,7 +305,6 @@
       });
     }
     
-    // Render recommendations: show up to 3 events from the filtered list
     function renderRecommendations(events) {
       const recContainer = document.getElementById("recommendationList");
       if (!recContainer) return;
@@ -378,6 +393,7 @@
         .then(response => response.json())
         .then(data => {
           if (data.country_code === "PK") {
+            // Set province from IP data, default to Punjab if not provided
             const province = data.region || "Punjab";
             document.getElementById("countryFilter").value = province;
             currentCountry = province;
@@ -385,6 +401,10 @@
             if (data.city) {
               document.getElementById("cityFilter").value = data.city;
               currentCity = data.city;
+            }
+            // Also store user location coordinates if available
+            if (data.latitude && data.longitude) {
+              userLocation = { lat: parseFloat(data.latitude), lng: parseFloat(data.longitude) };
             }
           }
           loadEvents();
