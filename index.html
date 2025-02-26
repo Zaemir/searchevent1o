@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Event Search Prototype</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+  
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -22,7 +22,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
   </script>
-
+  
   <!-- CSS Styles -->
   <style>
     /* Base styles */
@@ -155,6 +155,16 @@
       line-height: 1.3;
     }
     
+    /* Recommendations section */
+    .recommendations {
+      margin-top: 40px;
+    }
+    .recommendations h2 {
+      font-size: 1.5em;
+      margin-bottom: 10px;
+      color: #333;
+    }
+    
     /* Responsive adjustments */
     @media (max-width: 600px) {
       header .logo h2 { font-size: 1.5em; }
@@ -171,7 +181,7 @@
     let currentCountry = "";
     let currentCity = "";
     
-    // Sample mapping for Pakistan provinces and major cities
+    // Static mapping for Pakistan provinces and major cities (including Sialkot in Punjab)
     const pakistanData = {
       "Punjab": ["Lahore", "Faisalabad", "Rawalpindi", "Gujranwala", "Sialkot"],
       "Sindh": ["Karachi", "Hyderabad", "Sukkur"],
@@ -179,7 +189,7 @@
       "Balochistan": ["Quetta", "Gwadar"]
     };
     
-    // Populate the city dropdown based on the selected province
+    // Update city dropdown based on selected province
     function updateCityDropdown(province) {
       const citySelect = document.getElementById("cityFilter");
       citySelect.innerHTML = `<option value="">Select City</option>`;
@@ -203,7 +213,36 @@
           data.type = data.type || "event";
           events.push(data);
         });
-        renderItems(events);
+        // Depending on whether a search query is entered, apply filtering differently:
+        let filteredItems = [];
+        if (currentQuery) {
+          // If search query is non-empty, filter by text and then sort so that events matching currentCity come first.
+          filteredItems = events.filter(item =>
+            item.title.toLowerCase().includes(currentQuery) ||
+            item.description.toLowerCase().includes(currentQuery)
+          );
+          if (currentCity) {
+            filteredItems.sort((a, b) => {
+              const aMatch = a.location.toLowerCase().includes(currentCity.toLowerCase()) ? 0 : 1;
+              const bMatch = b.location.toLowerCase().includes(currentCity.toLowerCase()) ? 0 : 1;
+              return aMatch - bMatch;
+            });
+          }
+        } else {
+          // If search query is empty, filter by location if set.
+          filteredItems = events.filter(item => {
+            let matches = true;
+            if (currentCountry) {
+              matches = matches && item.location.toLowerCase().includes(currentCountry.toLowerCase());
+            }
+            if (currentCity) {
+              matches = matches && item.location.toLowerCase().includes(currentCity.toLowerCase());
+            }
+            return matches;
+          });
+        }
+        renderItems(filteredItems);
+        renderRecommendations(filteredItems);
       } catch (error) {
         console.error("Error fetching events:", error);
       }
@@ -212,21 +251,11 @@
     function renderItems(events) {
       const eventList = document.getElementById("eventList");
       eventList.innerHTML = "";
-      const filteredItems = events.filter(item => {
-        const matchesQuery = item.title.toLowerCase().includes(currentQuery) ||
-                             item.description.toLowerCase().includes(currentQuery);
-        const matchesType = currentFilter === "all" ? true : item.type === currentFilter;
-        const matchesCountry = currentCountry ? item.location.toLowerCase().includes(currentCountry.toLowerCase()) : true;
-        const matchesCity = currentCity ? item.location.toLowerCase().includes(currentCity.toLowerCase()) : true;
-        return matchesQuery && matchesType && matchesCountry && matchesCity;
-      });
-      
-      if (filteredItems.length === 0) {
+      if (events.length === 0) {
         eventList.innerHTML = "<p style='text-align:center;'>No events found.</p>";
         return;
       }
-      
-      filteredItems.forEach(item => {
+      events.forEach(item => {
         const card = document.createElement("div");
         card.className = "event-card";
         card.onclick = () => { window.location.href = "event.html?id=" + item.id; };
@@ -241,6 +270,32 @@
           <p>${item.description}</p>
         `;
         eventList.appendChild(card);
+      });
+    }
+    
+    // Render a simple recommendation section (show up to 3 events from the filtered list)
+    function renderRecommendations(events) {
+      const recContainer = document.getElementById("recommendationList");
+      recContainer.innerHTML = "";
+      if (events.length === 0) {
+        recContainer.innerHTML = "<p>No recommendations available.</p>";
+        return;
+      }
+      const recEvents = events.slice(0, 3);
+      recEvents.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "event-card";
+        card.onclick = () => { window.location.href = "event.html?id=" + item.id; };
+        const imageUrl = item.imageUrls && item.imageUrls.length > 0 
+          ? item.imageUrls[0].replace("via.placeholder.com", "dummyimage.com")
+          : "https://dummyimage.com/300x150/cccccc/000000?text=No+Image";
+        card.innerHTML = `
+          <img src="${imageUrl}" alt="${item.title}">
+          <h3>${item.title}</h3>
+          ${item.date ? `<p><strong>Date:</strong> ${item.date} ${item.time || ""}</p>` : ""}
+          <p><strong>Location:</strong> ${item.location}</p>
+        `;
+        recContainer.appendChild(card);
       });
     }
     
@@ -281,7 +336,7 @@
       fetch("https://ipwhois.app/json/")
         .then(response => response.json())
         .then(data => {
-          // For this demo, we assume the app is for Pakistan
+          // Ensure we're in Pakistan
           if (data.country_code === "PK") {
             // Use region as province if available, else default to Punjab
             const province = data.region || "Punjab";
@@ -339,6 +394,14 @@
     
     <div class="event-list" id="eventList">
       <!-- Event cards will be dynamically injected here -->
+    </div>
+    
+    <!-- Recommended Events Section -->
+    <div class="recommendations" id="recommendations">
+      <h2>Recommended Events</h2>
+      <div class="event-list" id="recommendationList">
+        <!-- Recommended events will be injected here -->
+      </div>
     </div>
   </div>
 </body>
