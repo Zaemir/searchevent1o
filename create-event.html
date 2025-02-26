@@ -5,11 +5,11 @@
   <title>Create Event</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <!-- Firebase SDK -->
+  <!-- Firebase SDK (placed in head for global availability) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script>
-    // Firebase configuration (placed in head for global availability)
+    // Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyCmFpsG231lCdIJtHeN6mH-Bxd-LHzrgZg",
       authDomain: "eventsearchprototype.firebaseapp.com",
@@ -32,7 +32,7 @@
     form { display: flex; flex-direction: column; }
     label { font-weight: bold; margin-top: 10px; }
     input, textarea, select { padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; }
-    /* Image Preview Styles */
+    /* Image preview container */
     #imagePreview { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
     #imagePreview img { height: 100px; border-radius: 5px; object-fit: cover; }
     /* Map container */
@@ -44,12 +44,12 @@
     }
   </style>
   
-  <!-- Main Script for Image Preview and Map Integration -->
+  <!-- Main Script: Image Preview Handler -->
   <script>
-    // Preview selected images in reverse order (last selected first)
+    // Preview selected images in reverse order (last selected appears first)
     function previewImages() {
       const previewContainer = document.getElementById("imagePreview");
-      previewContainer.innerHTML = "";
+      previewContainer.innerHTML = ""; // Clear previous previews
       const files = document.getElementById("eventImages").files;
       const fileArray = Array.from(files).reverse();
       fileArray.forEach(file => {
@@ -70,10 +70,11 @@
   <!-- Google Maps API -->
   <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCuHVId8jAJzgLLfH0jUe9P0HoolsvF9V0"></script>
   
-  <!-- Main Script for Map and Form Submission -->
+  <!-- Map and Geocoding Script -->
   <script>
     let map, marker;
-    // Initialize the map in the #map container and update marker on click
+    
+    // Initialize the map in the #map container
     function initMap() {
       const mapDiv = document.getElementById("map");
       if (!mapDiv) {
@@ -84,12 +85,13 @@
         center: { lat: 31.5204, lng: 74.3587 }, // Default center (Lahore)
         zoom: 12
       });
+      // Allow users to set marker by clicking on the map
       map.addListener("click", function(e) {
         placeMarker(e.latLng);
       });
     }
     
-    // Place or update marker on map and update hidden fields
+    // Place or update the marker and update hidden fields
     function placeMarker(location) {
       if (marker) {
         marker.setPosition(location);
@@ -103,10 +105,15 @@
       document.getElementById("lng").value = location.lng();
     }
     
-    // Geocode the manual address input and update the map
+    // Geocode the manually entered address and update the map
     function geocodeAddress() {
       const address = document.getElementById("manualLocation").value;
       if (!address) return;
+      // Ensure the Google Maps API is loaded
+      if (typeof google === "undefined" || !google.maps || !google.maps.Geocoder) {
+        console.error("Google Maps API not loaded yet.");
+        return;
+      }
       const geocoder = new google.maps.Geocoder();
       geocoder.geocode({ address: address }, function(results, status) {
         if (status === "OK") {
@@ -124,72 +131,17 @@
       initMap();
     });
   </script>
-</head>
-<body>
-  <header>
-    <nav>
-      <a href="index.html">Home</a>
-      <a href="auth.html">Sign In</a>
-      <a href="contact.html">Contact</a>
-    </nav>
-  </header>
   
-  <div class="container">
-    <h1>Create Event</h1>
-    <form id="createEventForm">
-      <!-- 1. Image Preview & Upload -->
-      <label>Image Preview:</label>
-      <div id="imagePreview"></div>
-      <label for="eventImages">Upload Images (select one or more):</label>
-      <input type="file" id="eventImages" name="eventImages" accept="image/*" multiple required>
-      
-      <!-- 2. Title -->
-      <label for="eventTitle">Title:</label>
-      <input type="text" id="eventTitle" name="eventTitle" required>
-      
-      <!-- 3. Description -->
-      <label for="eventDescription">Description:</label>
-      <textarea id="eventDescription" name="eventDescription" rows="4" required></textarea>
-      
-      <!-- 4. Province and City Selection -->
-      <label for="provinceSelect">Select Province:</label>
-      <select id="provinceSelect" name="provinceSelect" required>
-        <option value="">Select Province</option>
-        <option value="Punjab">Punjab</option>
-        <option value="Sindh">Sindh</option>
-        <option value="Khyber Pakhtunkhwa">Khyber Pakhtunkhwa</option>
-        <option value="Balochistan">Balochistan</option>
-      </select>
-      <label for="citySelect">Select City:</label>
-      <select id="citySelect" name="citySelect" required>
-        <option value="">Select City</option>
-        <!-- Cities will be populated dynamically -->
-      </select>
-      
-      <!-- 5. Manual Location Input & Map Integration -->
-      <label for="manualLocation">Enter Location (address):</label>
-      <input type="text" id="manualLocation" name="manualLocation" placeholder="e.g., Street, Area" onblur="geocodeAddress()">
-      <label>Pick Location on Map:</label>
-      <div id="map"></div>
-      <!-- Hidden fields for latitude and longitude -->
-      <input type="hidden" id="lat" name="lat" required>
-      <input type="hidden" id="lng" name="lng" required>
-      
-      <!-- 6. Submit Button -->
-      <button type="submit">Submit Event</button>
-    </form>
-  </div>
-  
-  <!-- Script for handling province/city dropdowns and form submission -->
+  <!-- Main Script for Handling Province/City Dropdowns and Form Submission -->
   <script>
-    // Mapping for Pakistan provinces to cities (Sialkot included)
+    // Mapping for Pakistan provinces and major cities
     const provinceToCities = {
       "Punjab": ["Lahore", "Faisalabad", "Rawalpindi", "Gujranwala", "Sialkot"],
       "Sindh": ["Karachi", "Hyderabad", "Sukkur"],
       "Khyber Pakhtunkhwa": ["Peshawar", "Abbottabad", "Mardan"],
       "Balochistan": ["Quetta", "Gwadar"]
     };
-
+    
     // Populate city dropdown based on selected province
     function populateCitySelect(province) {
       const citySelect = document.getElementById("citySelect");
@@ -203,15 +155,15 @@
         });
       }
     }
-
-    // Listen for changes in province selection to populate city dropdown
+    
+    // Listen for changes in province dropdown to populate city dropdown
     document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("provinceSelect").addEventListener("change", function(e) {
         populateCitySelect(e.target.value);
       });
     });
-
-    // Handle form submission with redirection including event ID
+    
+    // Handle form submission
     document.getElementById("createEventForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       
@@ -225,7 +177,7 @@
       const lat = document.getElementById("lat").value;
       const lng = document.getElementById("lng").value;
       
-      // Process image files: reverse order (last selected first) and simulate image URLs
+      // Process images: reverse the order so last selected appears first; simulate image URLs using dummyimage.com
       const imageUrls = [];
       const files = document.getElementById("eventImages").files;
       const fileArray = Array.from(files).reverse();
@@ -234,14 +186,14 @@
       });
       
       try {
-        // Save event data to Firestore and capture the document reference
+        // Save event data to Firestore, including location info and map coordinates
         const docRef = await db.collection("events").add({
           title: title,
           description: description,
           location: fullLocation,
           province: province,
           city: city,
-          date: "", // You can add date/time fields if needed
+          date: "",  // Add date/time if needed
           time: "",
           imageUrls: imageUrls,
           lat: lat,
@@ -249,7 +201,7 @@
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         alert("Event submitted successfully!");
-        // Redirect to event-submitted page with event ID in query string
+        // Redirect to event-submitted page with eventId in query string
         window.location.href = "event-submitted.html?eventId=" + docRef.id;
       } catch (error) {
         console.error("Error adding event:", error);
@@ -257,5 +209,60 @@
       }
     });
   </script>
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="auth.html">Sign In</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </header>
+  
+  <div class="container">
+    <h1>Create Event</h1>
+    <form id="createEventForm">
+      <!-- 1. Image Preview & Image Upload -->
+      <label>Image Preview:</label>
+      <div id="imagePreview"></div>
+      <label for="eventImages">Upload Images (select one or more):</label>
+      <input type="file" id="eventImages" name="eventImages" accept="image/*" multiple required>
+      
+      <!-- 2. Title -->
+      <label for="eventTitle">Title:</label>
+      <input type="text" id="eventTitle" name="eventTitle" required>
+      
+      <!-- 3. Description -->
+      <label for="eventDescription">Description:</label>
+      <textarea id="eventDescription" name="eventDescription" rows="4" required></textarea>
+      
+      <!-- 4. Province & City Selection -->
+      <label for="provinceSelect">Select Province:</label>
+      <select id="provinceSelect" name="provinceSelect" required>
+        <option value="">Select Province</option>
+        <option value="Punjab">Punjab</option>
+        <option value="Sindh">Sindh</option>
+        <option value="Khyber Pakhtunkhwa">Khyber Pakhtunkhwa</option>
+        <option value="Balochistan">Balochistan</option>
+      </select>
+      <label for="citySelect">Select City:</label>
+      <select id="citySelect" name="citySelect" required>
+        <option value="">Select City</option>
+        <!-- Cities populated dynamically -->
+      </select>
+      
+      <!-- 5. Manual Location Input & Integrated Map -->
+      <label for="manualLocation">Enter Location (address):</label>
+      <input type="text" id="manualLocation" name="manualLocation" placeholder="e.g., Street, Area" onblur="geocodeAddress()">
+      <label>Pick Location on Map:</label>
+      <div id="map"></div>
+      <!-- Hidden fields to store latitude and longitude -->
+      <input type="hidden" id="lat" name="lat" required>
+      <input type="hidden" id="lng" name="lng" required>
+      
+      <!-- 6. Submit Button -->
+      <button type="submit">Submit Event</button>
+    </form>
+  </div>
 </body>
 </html>
